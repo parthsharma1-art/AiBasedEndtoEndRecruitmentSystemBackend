@@ -30,6 +30,7 @@ public class PublicController {
     public ResponseEntity<Map<String, String>> register(@RequestBody UserRequest request) {
         UserDTO user = userService.createUser(request);
         String token = jwtUtil.generateToken(user);
+        log.info("This is the new token i have created :{}",token);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
