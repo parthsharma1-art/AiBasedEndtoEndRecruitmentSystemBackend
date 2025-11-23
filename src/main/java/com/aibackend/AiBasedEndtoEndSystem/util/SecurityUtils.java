@@ -11,7 +11,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 @Slf4j
 public final class SecurityUtils {
 
-    private SecurityUtils() {}
+    private SecurityUtils() {
+    }
+
     public static AppPrincipal getLoggedInPrincipal() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null) {
@@ -19,6 +21,7 @@ public final class SecurityUtils {
         }
         Object principal = auth.getPrincipal();
         if (principal instanceof AppPrincipal) {
+            log.info("The principal instance is :{}", (AppPrincipal) principal);
             return (AppPrincipal) principal;
         }
         throw new BadException("Authenticated principal is not an AppPrincipal");
