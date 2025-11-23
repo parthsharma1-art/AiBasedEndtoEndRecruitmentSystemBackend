@@ -101,10 +101,9 @@ public class CandidateService {
         throw new BadException("No Candidate found with this " + mobileNumber);
     }
 
-    public Candidate findById(String id) {
+    public Candidate findById(ObjectId id) {
         log.info("Get Hr BY id : {}", id);
-        ObjectId objectId = new ObjectId(id);
-        return candidateRepository.findById(objectId).orElse(null);
+        return candidateRepository.findById(id).orElse(null);
     }
 
 }

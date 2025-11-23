@@ -12,10 +12,6 @@ public class UserDTO implements AppPrincipal {
     private String userEmail;
     private User.Role role;
 
-    public enum UserType{
-        RECRUITER,CANDIDATE,USER
-    }
-
     @Override
     public ObjectId getId() {
         return id == null ? null : id;

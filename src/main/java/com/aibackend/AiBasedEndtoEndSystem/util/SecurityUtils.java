@@ -1,6 +1,6 @@
 package com.aibackend.AiBasedEndtoEndSystem.util;
 
-import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
+import com.aibackend.AiBasedEndtoEndSystem.entity.User;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
 import com.aibackend.AiBasedEndtoEndSystem.security.AppPrincipal;
 import lombok.extern.slf4j.Slf4j;
@@ -12,11 +12,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 public final class SecurityUtils {
 
     private SecurityUtils() {}
-
     public static AppPrincipal getLoggedInPrincipal() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        log.info("SecurityUtils - auth: {}, principal class: {}",
-                auth, auth == null ? "null" : auth.getPrincipal().getClass().getName());
         if (auth == null) {
             throw new BadException("No authentication in security context");
         }
@@ -27,18 +24,8 @@ public final class SecurityUtils {
         throw new BadException("Authenticated principal is not an AppPrincipal");
     }
 
-    public static String getLoggedInUserTypeAsString() {
-        return getLoggedInPrincipal().getUserType().toString();
-    }
-
-    public static UserDTO.UserType getLoggedInUserType() {
-        String type = getLoggedInUserTypeAsString();
-        if (type == null) return null;
-        try {
-            return UserDTO.UserType.valueOf(type.toUpperCase());
-        } catch (IllegalArgumentException ex) {
-            return null;
-        }
+    public static User.Role getLoggedInUserRole() {
+        return getLoggedInPrincipal().getRole();   // returns HR / CANDIDATE / USER
     }
 
     public static String getLoggedInUserIdAsString() {

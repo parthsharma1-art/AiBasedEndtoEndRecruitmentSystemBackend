@@ -74,10 +74,9 @@ public class RecruiterService {
     }
 
 
-    public Recruiter findById(String id) {
+    public Recruiter findById(ObjectId id) {
         log.info("Get Hr BY id : {}", id);
-        ObjectId objectId = new ObjectId(id);
-        return hrRepository.findById(objectId).orElse(null);
+        return hrRepository.findById(id).orElse(null);
     }
 
 }

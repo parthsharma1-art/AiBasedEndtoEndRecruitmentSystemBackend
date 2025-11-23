@@ -10,6 +10,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -50,7 +51,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             return;
         }
         String username = claims.getSubject();
-        String userIdStr = claims.get("userId", String.class);    // or Integer/Long if you stored as number
+        ObjectId userIdStr = claims.get("userId", ObjectId.class);    // or Integer/Long if you stored as number
         String userType = claims.get("userType", String.class).toLowerCase();   // "hr" | "candidate" | "user"
 
         if (userType == null || userIdStr == null) {

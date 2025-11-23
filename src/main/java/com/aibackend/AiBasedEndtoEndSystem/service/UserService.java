@@ -81,16 +81,15 @@ public class UserService {
         return users;
     }
 
-    public Optional<User> findById(String userId) {
-        Optional<User> user = userRepository.findById(userId);
-        if (user.isPresent()) {
-            return user;
+    public User findById(ObjectId id) {
+        Optional<User> user = userRepository.findById(id);
+        if(user.isPresent()){
+            return user.get();
         }
         return null;
     }
 
-    public User getUserById(String userId) {
-        ObjectId objectId = new ObjectId(userId);
+    public User getUserById(ObjectId userId) {
         Optional<User> user = userRepository.findById(userId);
         if (user.isPresent()) {
             return user.get();

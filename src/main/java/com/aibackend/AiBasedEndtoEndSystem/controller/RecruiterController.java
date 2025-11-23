@@ -1,6 +1,7 @@
 package com.aibackend.AiBasedEndtoEndSystem.controller;
 
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
+import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
 import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
 import com.aibackend.AiBasedEndtoEndSystem.util.SecurityUtils;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
@@ -16,14 +17,14 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 public class RecruiterController {
     @Autowired
-    private RecruiterService hrService;
+    private RecruiterService recruiterService;
     @Autowired
     private JwtUtil jwtUtil;
 
     @PostMapping("/create")
     public String createNewHR(@RequestBody HrDTO request) {
         log.info("New Hr Details :{}", request);
-        UserDTO userDTO = hrService.createNewRecruiter(request);
+        UserDTO userDTO = recruiterService.createNewRecruiter(request);
         return jwtUtil.generateToken(userDTO);
     }
 
@@ -31,7 +32,12 @@ public class RecruiterController {
     public Recruiter getUser(@PathVariable String mobileNumber) {
         ObjectId objectId = SecurityUtils.getLoggedInUserIdAsObjectId();
         log.info("Get User by mobile number :{}", mobileNumber);
-        return hrService.getHrByMobileNumber(mobileNumber);
+        Recruiter re = recruiterService.findById(objectId);
+        if (re.getName().equals("Parth Sharma")) {
+            return recruiterService.getHrByMobileNumber(mobileNumber);
+        }
+        throw new BadException("User not found for this ");
+
     }
 
     @Data
