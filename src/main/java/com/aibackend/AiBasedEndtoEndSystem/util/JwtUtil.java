@@ -1,53 +1,47 @@
 package com.aibackend.AiBasedEndtoEndSystem.util;
 
+
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
-import com.aibackend.AiBasedEndtoEndSystem.entity.User;
-import org.springframework.stereotype.Component;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.JwtException;
+import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component
 public class JwtUtil {
 
-    private static final String SECRET =
-            "MyVeryLongSecretKeyForJWTGenerationThatIsAtLeast64CharactersLongForHS512Algorithm";
-    private static final long EXPIRATION = 24 * 60 * 60 * 1000; // 1 day
-
-    private final SecretKey secretKey;
-
-    public JwtUtil() {
-        this.secretKey = Keys.hmacShaKeyFor(SECRET.getBytes());
-    }
+    private final String SECRET = "THIS_IS_A_LONG_SECRET_KEY_FOR_JWT_512_BITS_EXAMPLE_12345678901234567890";
 
     public String generateToken(UserDTO user) {
-        User.Role role = (user.getRole() != null) ? user.getRole() : User.Role.USER;
+
+        Map<String, Object> claims = new HashMap<>();
+
+        // ADD USER ID AS STRING (IMPORTANT)
+        claims.put("userId", user.getId().toHexString());
+        claims.put("role", user.getRole().name());
+
         return Jwts.builder()
-                .setSubject(user.getUserEmail())
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION))
-                .signWith(secretKey)
-                .claim("userId", user.getId())
-                .claim("role", role)                  // IMPORTANT: Store role in JWT
+                .subject(user.getUserEmail())
+                .claims(claims)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + 86400000)) // 1 day
+                .signWith(getSigningKey(), Jwts.SIG.HS512)
                 .compact();
     }
 
-    public Claims validateAndGetClaims(String token) {
-        try {
-            return Jwts.parser()
-                    .verifyWith(secretKey)
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload();
-        } catch (ExpiredJwtException ex) {
-            throw ex;
-        } catch (JwtException ex) {
-            throw ex;
-        }
+    public Claims extractAllClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(getSigningKey())     // NEW WAY for 0.12.x
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+    }
+
+    private SecretKey getSigningKey() {
+        return Keys.hmacShaKeyFor(SECRET.getBytes());
     }
 }

@@ -34,7 +34,7 @@ public class UserService {
         user.setName(userDTO.getName());
         user.setMobileNumber(userDTO.getMobileNumber());
         user.setState(userDTO.getState());
-        user.setType(userDTO.getUserType());
+        user.setRole(userDTO.getRole());
         User savedUser = userRepository.save(user);
         log.info("Saved User Details :{}", savedUser);
         return toUserDTO(user);
@@ -43,7 +43,7 @@ public class UserService {
     public UserDTO toUserDTO(User user) {
         UserDTO dto = new UserDTO();
         dto.setId(user.getId());
-        dto.setUserEmail(user.getUserEmail());
+        dto.setUserEmail(user.getEmail());
         dto.setUsername(user.getName());
         dto.setRole(User.Role.USER);
         return dto;

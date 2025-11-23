@@ -1,6 +1,5 @@
 package com.aibackend.AiBasedEndtoEndSystem.entity;
 
-import com.aibackend.AiBasedEndtoEndSystem.security.AppPrincipal;
 import lombok.Data;
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;

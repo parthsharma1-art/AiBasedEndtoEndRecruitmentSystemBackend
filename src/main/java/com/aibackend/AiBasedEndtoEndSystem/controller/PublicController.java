@@ -30,7 +30,7 @@ public class PublicController {
     public ResponseEntity<Map<String, String>> register(@RequestBody UserRequest request) {
         UserDTO user = userService.createUser(request);
         String token = jwtUtil.generateToken(user);
-        log.info("This is the new token i have created :{}",token);
+        log.info("This is the new token i have created :{}", token);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
@@ -48,12 +48,12 @@ public class PublicController {
 
     @GetMapping("/all")
     public List<User> getAllUser() {
-        User userId =(User) SecurityUtils.getLoggedInPrincipal();
-        log.info("User user :{}", userId);
-        if (userId.getName().equals("Parth Sharma")) {
+        UserDTO loggedIn = SecurityUtils.getLoggedInUser();
+        log.info("Logged in user: {}", loggedIn);
+        if (User.Role.USER.equals(loggedIn.getRole())) {
             return userService.getAllUser();
         }
-        throw new BadException("not authorized");
+        throw new BadException("Not authorized");
     }
 
     @Data
@@ -62,7 +62,7 @@ public class PublicController {
         private String mobileNumber;
         private Integer age;
         private String state;
-        private String userType;
+        private User.Role role;
     }
 
     @Data

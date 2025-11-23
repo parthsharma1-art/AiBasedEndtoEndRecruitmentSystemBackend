@@ -1,46 +1,32 @@
 package com.aibackend.AiBasedEndtoEndSystem.util;
 
-import com.aibackend.AiBasedEndtoEndSystem.entity.User;
+import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
-import com.aibackend.AiBasedEndtoEndSystem.security.AppPrincipal;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 @Slf4j
-public final class SecurityUtils {
-
-    private SecurityUtils() {}
-    public static AppPrincipal getLoggedInPrincipal() {
+public class SecurityUtils {
+    public static UserDTO getLoggedInUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null) {
-            throw new BadException("No authentication in security context");
+        if (auth == null || auth.getPrincipal() == null) {
+            return null;
         }
-        Object principal = auth.getPrincipal();
-        if (principal instanceof AppPrincipal) {
-            return (AppPrincipal) principal;
+        if (auth.getPrincipal() instanceof UserDTO userDTO) {
+            return userDTO;
         }
-        throw new BadException("Authenticated principal is not an AppPrincipal");
+        return null;
     }
 
-    public static User.Role getLoggedInUserRole() {
-        return getLoggedInPrincipal().getRole();   // returns HR / CANDIDATE / USER
+    public static ObjectId getLoggedInUserId() {
+        UserDTO user = getLoggedInUser();
+        return user != null ? user.getId() : null;
     }
 
-    public static String getLoggedInUserIdAsString() {
-        return getLoggedInPrincipal().getId().toString();
-    }
-
-    public static ObjectId getLoggedInUserIdAsObjectId() {
-        String id = getLoggedInUserIdAsString();
-        if (id == null || id.isBlank()) {
-            throw new BadException("Logged-in user id is null or blank");
-        }
-        try {
-            return new ObjectId(id);
-        } catch (IllegalArgumentException ex) {
-            throw new BadException("Logged-in user id is not a valid ObjectId: " + id);
-        }
+    public static String getLoggedInUserRole() {
+        UserDTO user = getLoggedInUser();
+        return user != null ? user.getRole().name() : null;
     }
 }

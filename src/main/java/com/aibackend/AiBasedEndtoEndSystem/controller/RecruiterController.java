@@ -1,6 +1,7 @@
 package com.aibackend.AiBasedEndtoEndSystem.controller;
 
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
+import com.aibackend.AiBasedEndtoEndSystem.entity.User;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
 import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
 import com.aibackend.AiBasedEndtoEndSystem.util.SecurityUtils;
@@ -30,15 +31,19 @@ public class RecruiterController {
 
     @GetMapping("/get/{mobileNumber}")
     public Recruiter getUser(@PathVariable String mobileNumber) {
-        ObjectId objectId = SecurityUtils.getLoggedInUserIdAsObjectId();
-        log.info("Get User by mobile number :{}", mobileNumber);
-        Recruiter re = recruiterService.findById(objectId);
-        if (re.getName().equals("Parth Sharma")) {
-            return recruiterService.getHrByMobileNumber(mobileNumber);
+        UserDTO loggedInUser = SecurityUtils.getLoggedInUser();
+        if (!loggedInUser.getRole().equals(User.Role.RECRUITER)) {
+            throw new BadException("Only Recruiter can access this endpoint");
         }
-        throw new BadException("User not found for this ");
-
+        Recruiter recruiter = recruiterService.getHrByMobileNumber(mobileNumber);
+        if (recruiter == null) {
+            throw new BadException("Recruiter not found");
+        }
+        return recruiter;
     }
+
+
+
 
     @Data
     public static class HrDTO {
