@@ -1,12 +1,12 @@
 package com.aibackend.AiBasedEndtoEndSystem.service;
 
-import com.aibackend.AiBasedEndtoEndSystem.controller.RecruiterController.HrDTO;
+import com.aibackend.AiBasedEndtoEndSystem.controller.RecruiterController;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
 import com.aibackend.AiBasedEndtoEndSystem.exception.HrException;
 import com.aibackend.AiBasedEndtoEndSystem.repository.RecruiterRepository;
+import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtiliy;
 import lombok.extern.slf4j.Slf4j;
-import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
@@ -20,14 +20,17 @@ public class RecruiterService {
     private RecruiterRepository hrRepository;
     @Autowired
     private UserService userService;
+    @Autowired
+    private UniqueUtiliy uniqueUtiliy;
 
-    public UserDTO createNewRecruiter(HrDTO request) {
+    public UserDTO createNewRecruiter(RecruiterController.RecruiterRequest request) {
         Recruiter recruiter = new Recruiter();
         validateRequest(request);
         Optional<Recruiter> existing = hrRepository.findByMobileNumber(request.getMobileNumber());
         if (existing.isPresent()) {
             return userService.toRecruiterDTO(existing.get());
         }
+        recruiter.setId(uniqueUtiliy.getNextNumber("RECRUITER","hr"));
         recruiter.setName(request.getName());
         recruiter.setCompanyName(request.getCompanyName());
         recruiter.setDesignation(request.getDesignation());
@@ -46,7 +49,7 @@ public class RecruiterService {
         throw new HrException("Hr does not exist " + mobileNumber);
     }
 
-    private void validateRequest(HrDTO request) {
+    private void validateRequest(RecruiterController.RecruiterRequest request) {
         if (ObjectUtils.isEmpty(request.getName())) {
             throw new HrException("Hr Name is required");
         }
@@ -74,9 +77,19 @@ public class RecruiterService {
     }
 
 
-    public Recruiter findById(ObjectId id) {
+    public Recruiter findById(String id) {
         log.info("Get Hr BY id : {}", id);
         return hrRepository.findById(id).orElse(null);
+    }
+
+    public UserDTO getUserLogin(String mobileNumber) {
+        log.info("User mobile Number :{}", mobileNumber);
+        Optional<Recruiter> recruiter = hrRepository.findByMobileNumber(mobileNumber);
+        if (recruiter.isPresent()) {
+            return userService.toRecruiterDTO(recruiter.get());
+        }
+        return null;
+
     }
 
 }

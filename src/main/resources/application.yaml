@@ -3,7 +3,6 @@ spring:
     mongodb:
       uri: mongodb+srv://parthsharma2640:7817971083%40ps@cluster0.du0knbh.mongodb.net/?retryWrites=true&w=majority
       database: aibasedendtoendsystem
-
 server:
   port: 8081
   servlet:

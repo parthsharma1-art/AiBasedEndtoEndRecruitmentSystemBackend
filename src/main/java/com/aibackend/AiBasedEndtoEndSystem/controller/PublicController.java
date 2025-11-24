@@ -1,5 +1,6 @@
 package com.aibackend.AiBasedEndtoEndSystem.controller;
 
+import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
 import com.aibackend.AiBasedEndtoEndSystem.util.SecurityUtils;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.User;
@@ -9,13 +10,8 @@ import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/public")
@@ -27,33 +23,49 @@ public class PublicController {
     private JwtUtil jwtUtil;
 
     @PostMapping("/register")
-    public ResponseEntity<Map<String, String>> register(@RequestBody UserRequest request) {
+    public UserResponse register(@RequestBody UserRequest request) throws Exception{
         UserDTO user = userService.createUser(request);
-        String token = jwtUtil.generateToken(user);
-        log.info("This is the new token i have created :{}",token);
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-                .body(Map.of("token", token));
+        user.setRole("User");
+        JwtUtil.Token token = jwtUtil.generateClientToken(user);
+        log.info("This is the new token i have created :{}", token);
+        return toUserResponse(user,token);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, String>> login(@RequestBody LoginRequest login) {
+    public UserResponse login(@RequestBody LoginRequest login) throws Exception{
         UserDTO user = userService.getUserByMobileNumber(login.getMobileNumber());
-        String token = jwtUtil.generateToken(user);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-                .body(Map.of("token", token));
+        user.setRole("User");
+        JwtUtil.Token token = jwtUtil.generateClientToken(user);
+        return toUserResponse(user,token);
     }
 
-    @GetMapping("/all")
-    public List<User> getAllUser() {
-        User userId =(User) SecurityUtils.getLoggedInPrincipal();
-        log.info("User user :{}", userId);
-        if (userId.getName().equals("Parth Sharma")) {
-            return userService.getAllUser();
+    public UserResponse toUserResponse(UserDTO user, JwtUtil.Token token){
+        UserResponse response=new UserResponse();
+        response.setId(user.getId());
+        response.setUserEmail(user.getUserEmail());
+        response.setUserMobileNumber(user.getMobileNumber());
+        response.setUserName(user.getUsername());
+        response.setToken(token);
+        return response;
+    }
+    
+    @Data
+    public static class UserResponse{
+        private String id;
+        private String userName;
+        private String userEmail;
+        private String userMobileNumber;
+        private JwtUtil.Token token;
+    }
+
+    @GetMapping("/get")
+    public UserDTO getUser(@RequestHeader("Authorization") String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new BadException("Missing or invalid Authorization header");
         }
-        throw new BadException("not authorized");
+        String token = authHeader.substring(7); // remove "Bearer "
+        log.info("Token for the Recruiter :{}", token);
+        return SecurityUtils.getLoggedInUser(token, jwtUtil.getKey());
     }
 
     @Data
@@ -61,8 +73,7 @@ public class PublicController {
         private String name;
         private String mobileNumber;
         private Integer age;
-        private String state;
-        private String userType;
+        private String email;
     }
 
     @Data

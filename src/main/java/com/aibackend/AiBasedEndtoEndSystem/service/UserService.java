@@ -7,6 +7,7 @@ import com.aibackend.AiBasedEndtoEndSystem.exception.UserNotFoundException;
 import com.aibackend.AiBasedEndtoEndSystem.controller.PublicController;
 import com.aibackend.AiBasedEndtoEndSystem.entity.User;
 import com.aibackend.AiBasedEndtoEndSystem.repository.UserRepository;
+import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtiliy;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,20 +22,22 @@ import java.util.Optional;
 public class UserService {
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private UniqueUtiliy uniqueUtiliy;
 
-    public UserDTO createUser(PublicController.UserRequest userDTO) {
-        log.info("New User data :{}", userDTO);
-        Optional<User> existing = userRepository.findByMobileNumber(userDTO.getMobileNumber());
+    public UserDTO createUser(PublicController.UserRequest request) {
+        log.info("New User data :{}", request);
+        Optional<User> existing = userRepository.findByMobileNumber(request.getMobileNumber());
         if (!ObjectUtils.isEmpty(existing)) {
             log.info("Existing User :{}", existing);
             return toUserDTO(existing.get());
         }
         User user = new User();
-        user.setAge(userDTO.getAge());
-        user.setName(userDTO.getName());
-        user.setMobileNumber(userDTO.getMobileNumber());
-        user.setState(userDTO.getState());
-        user.setType(userDTO.getUserType());
+        user.setId(uniqueUtiliy.getNextNumber("USER","us"));
+        user.setAge(request.getAge());
+        user.setName(request.getName());
+        user.setMobileNumber(request.getMobileNumber());
+        user.setEmail(request.getEmail());
         User savedUser = userRepository.save(user);
         log.info("Saved User Details :{}", savedUser);
         return toUserDTO(user);
@@ -43,9 +46,9 @@ public class UserService {
     public UserDTO toUserDTO(User user) {
         UserDTO dto = new UserDTO();
         dto.setId(user.getId());
-        dto.setUserEmail(user.getUserEmail());
+        dto.setUserEmail(user.getEmail());
         dto.setUsername(user.getName());
-        dto.setRole(User.Role.USER);
+        dto.setMobileNumber(user.getMobileNumber());
         return dto;
     }
 
@@ -54,7 +57,7 @@ public class UserService {
         dto.setId(recruiter.getId());
         dto.setUserEmail(recruiter.getEmail());
         dto.setUsername(recruiter.getName());
-        dto.setRole(User.Role.RECRUITER);
+        dto.setMobileNumber(recruiter.getMobileNumber());
         return dto;
     }
 
@@ -63,7 +66,7 @@ public class UserService {
         dto.setId(candidate.getId());
         dto.setUserEmail(candidate.getEmail());
         dto.setUsername(candidate.getName());
-        dto.setRole(User.Role.CANDIDATE);
+        dto.setMobileNumber(candidate.getMobileNumber());
         return dto;
     }
 
@@ -81,15 +84,7 @@ public class UserService {
         return users;
     }
 
-    public User findById(ObjectId id) {
-        Optional<User> user = userRepository.findById(id);
-        if(user.isPresent()){
-            return user.get();
-        }
-        return null;
-    }
-
-    public User getUserById(ObjectId userId) {
+    public User getUserById(String userId) {
         Optional<User> user = userRepository.findById(userId);
         if (user.isPresent()) {
             return user.get();

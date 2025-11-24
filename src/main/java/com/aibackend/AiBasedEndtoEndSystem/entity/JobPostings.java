@@ -12,7 +12,7 @@ import java.util.List;
 @Document(collection = "job_postings")
 public class JobPostings {
     @Id
-    private ObjectId id;
+    private String id;
     private String title;
     private String description;
     private List<String> skillsRequired;

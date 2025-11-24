@@ -1,6 +1,5 @@
 package com.aibackend.AiBasedEndtoEndSystem.entity;
 
-import com.aibackend.AiBasedEndtoEndSystem.security.AppPrincipal;
 import lombok.Data;
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
@@ -12,7 +11,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class Recruiter {
 
     @Id
-    private ObjectId id;
+    private String id;
     private String userId;            // link to User collection
     private String name;
     private String email;

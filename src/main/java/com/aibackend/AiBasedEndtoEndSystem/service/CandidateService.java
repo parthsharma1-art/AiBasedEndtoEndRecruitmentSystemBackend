@@ -5,6 +5,7 @@ import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Candidate;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
 import com.aibackend.AiBasedEndtoEndSystem.repository.CandidateRepository;
+import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtiliy;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +22,8 @@ public class CandidateService {
     private CandidateRepository candidateRepository;
     @Autowired
     private UserService userService;
+    @Autowired
+    private UniqueUtiliy uniqueUtiliy;
 
     public UserDTO createNewCandidate(CandidateRequest request) {
         log.info("Create new candidate :{}", request);
@@ -30,6 +33,7 @@ public class CandidateService {
             return userService.toCandidateDTO(existing.get());
         }
         Candidate candidate = new Candidate();
+        candidate.setId(uniqueUtiliy.getNextNumber("CANDIDATE","cd"));
         candidate.setName(request.getName());
         candidate.setEmail(request.getEmail());
         candidate.setMobileNumber(request.getMobileNumber());
@@ -92,17 +96,18 @@ public class CandidateService {
 
     }
 
-    public Candidate getCandidateByMobileNumber(String mobileNumber) {
+    public UserDTO getCandidateByMobileNumber(String mobileNumber) {
         log.info("Get the candidate for mobile Number :{}", mobileNumber);
         Optional<Candidate> existing = candidateRepository.findByMobileNumber(mobileNumber);
         if (existing.isPresent()) {
-            return existing.get();
+            return userService.toCandidateDTO(existing.get());
         }
         throw new BadException("No Candidate found with this " + mobileNumber);
     }
 
-    public Candidate findById(ObjectId id) {
-        log.info("Get Hr BY id : {}", id);
+
+    public Candidate findById(String id) {
+        log.info("Get Candidate By id : {}", id);
         return candidateRepository.findById(id).orElse(null);
     }
 

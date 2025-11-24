@@ -11,7 +11,7 @@ import java.util.List;
 @Document(collection = "company_details")
 public class Company {
     @Id
-    private ObjectId id;
+    private String id;
     private String companyName;
     private String address;
     private String website;
