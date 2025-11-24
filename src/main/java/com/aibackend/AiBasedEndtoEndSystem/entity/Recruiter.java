@@ -11,7 +11,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class Recruiter {
 
     @Id
-    private ObjectId id;
+    private String id;
     private String userId;            // link to User collection
     private String name;
     private String email;

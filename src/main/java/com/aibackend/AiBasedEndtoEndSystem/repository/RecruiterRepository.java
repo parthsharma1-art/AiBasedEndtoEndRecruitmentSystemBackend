@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface RecruiterRepository extends MongoRepository<Recruiter, ObjectId> {
+public interface RecruiterRepository extends MongoRepository<Recruiter, String> {
     Optional<Recruiter> findByMobileNumber(String mobileNumber);
 
 }

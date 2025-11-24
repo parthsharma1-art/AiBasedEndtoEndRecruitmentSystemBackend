@@ -9,9 +9,12 @@ import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
 import com.aibackend.AiBasedEndtoEndSystem.service.RecruiterService;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/hr")
@@ -21,32 +24,42 @@ public class RecruiterController {
     private RecruiterService recruiterService;
     @Autowired
     private JwtUtil jwtUtil;
+    @Autowired
+    private PublicController publicController;
 
     @PostMapping("/create")
-    public String createNewHR(@RequestBody HrDTO request) {
+    public PublicController.UserResponse createNewHR(@RequestBody RecruiterRequest request) throws Exception {
         log.info("New Hr Details :{}", request);
         UserDTO userDTO = recruiterService.createNewRecruiter(request);
-        return jwtUtil.generateToken(userDTO);
+        userDTO.setRole("Recruiter");
+        JwtUtil.Token token = jwtUtil.generateClientToken(userDTO);
+        return publicController.toUserResponse(userDTO, token);
     }
 
-    @GetMapping("/get/{mobileNumber}")
-    public Recruiter getUser(@PathVariable String mobileNumber) {
-        UserDTO loggedInUser = SecurityUtils.getLoggedInUser();
-        if (!loggedInUser.getRole().equals(User.Role.RECRUITER)) {
-            throw new BadException("Only Recruiter can access this endpoint");
-        }
-        Recruiter recruiter = recruiterService.getHrByMobileNumber(mobileNumber);
-        if (recruiter == null) {
-            throw new BadException("Recruiter not found");
-        }
-        return recruiter;
+    @PostMapping("/login")
+    public PublicController.UserResponse createNewHR(@RequestBody PublicController.LoginRequest request) throws Exception {
+        log.info("New Hr Details :{}", request);
+        UserDTO userDTO = recruiterService.getUserLogin(request.getMobileNumber());
+        userDTO.setRole("Recruiter");
+        JwtUtil.Token token = jwtUtil.generateClientToken(userDTO);
+        return publicController.toUserResponse(userDTO, token);
     }
 
-
+    @GetMapping("/get")
+    public UserDTO getUser(@RequestHeader("Authorization") String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new BadException("Missing or invalid Authorization header");
+        }
+        String token = authHeader.substring(7); // remove "Bearer "
+        String id = jwtUtil.extractUserObjectId(token);
+        log.info("Id for the candiate is :{}", id);
+        log.info("Token for the Recruiter :{}", token);
+        return SecurityUtils.getLoggedInUser(token, jwtUtil.getKey());
+    }
 
 
     @Data
-    public static class HrDTO {
+    public static class RecruiterRequest {
         private String name;
         private String mobileNumber;
         private String email;

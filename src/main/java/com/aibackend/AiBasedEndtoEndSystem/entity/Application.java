@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 public class Application {
 
     @Id
-    private ObjectId id;
+    private String id;
 
     private String candidateId;
     private String jobId;

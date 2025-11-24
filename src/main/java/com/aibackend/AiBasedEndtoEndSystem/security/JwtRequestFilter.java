@@ -1,13 +1,17 @@
 package com.aibackend.AiBasedEndtoEndSystem.security;
 
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
+import com.aibackend.AiBasedEndtoEndSystem.entity.Candidate;
+import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
 import com.aibackend.AiBasedEndtoEndSystem.entity.User;
+import com.aibackend.AiBasedEndtoEndSystem.service.MyUserDetailsService;
 import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
 import io.jsonwebtoken.Claims;
 import lombok.extern.slf4j.Slf4j;
-import org.bson.types.ObjectId;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import jakarta.servlet.FilterChain;
@@ -17,49 +21,78 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Collections;
 
+@Component
 @Slf4j
 public class JwtRequestFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final MyUserDetailsService userService;
 
-    public JwtRequestFilter(JwtUtil jwtUtil) {
+    public JwtRequestFilter(JwtUtil jwtUtil, MyUserDetailsService userService) {
         this.jwtUtil = jwtUtil;
+        this.userService = userService;
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain)
             throws ServletException, IOException {
 
-        String header = req.getHeader("Authorization");
+        final String authHeader = request.getHeader("Authorization");
+        String jwt = null;
 
-        if (header == null || !header.startsWith("Bearer ")) {
-            chain.doFilter(req, res);
-            return;
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            jwt = authHeader.substring(7);
         }
 
-        String token = header.substring(7);
+        if (jwt != null) {
+            try {
+                Claims claims = jwtUtil.extractAllClaims(jwt);
+                log.info("ALL CLAIMS: {}", claims);
 
-        try {
-            Claims claims = jwtUtil.extractAllClaims(token);
+                if (claims != null) {
+                    String userId = claims.getSubject().trim();
+                    String role = claims.get("role", String.class);
+                    log.info("Id for the user is :{}",userId);
+                    log.info("Role :{}",role);
+                    Object userEntity = switch (role) {
+                        case "User" -> userService.loadUserEntityById(userId);
+                        case "Candidate" -> userService.loadCandidateById(userId);
+                        case "Recruiter" -> userService.loadRecruiterById(userId);
+                        default -> throw new RuntimeException("Invalid role in token");
+                    };
+                    UserDTO userDTO = new UserDTO();
+                    userDTO.setId(userId);
+                    userDTO.setRole(role);
+                    if (userEntity instanceof User u) {
+                        userDTO.setUsername(u.getName());
+                        userDTO.setUserEmail(u.getEmail());
+                    }
+                    if (userEntity instanceof Candidate c) {
+                        userDTO.setUsername(c.getName());
+                        userDTO.setUserEmail(c.getEmail());
+                    }
+                    if (userEntity instanceof Recruiter r) {
+                        userDTO.setUsername(r.getName());
+                        userDTO.setUserEmail(r.getEmail());
+                    }
 
-            UserDTO dto = new UserDTO();
-            String userIdStr = claims.get("userId", String.class);
-            String email = claims.get("sub", String.class);
-            String role = claims.get("role", String.class);
-            dto.setId(new ObjectId(userIdStr));
-            dto.setUserEmail(email);
-            dto.setRole(User.Role.valueOf(role));
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDTO,
+                                    null,
+                                    Collections.emptyList()
+                            );
 
-
-            UsernamePasswordAuthenticationToken auth =
-                    new UsernamePasswordAuthenticationToken(dto, null, Collections.emptyList());
-
-            SecurityContextHolder.getContext().setAuthentication(auth);
-
-        } catch (Exception e) {
-            log.error("JWT Validation Failed: {}", e.getMessage());
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
+            } catch (Exception e) {
+                log.error("JWT authentication failed: {}", e.getMessage());
+            }
         }
 
-        chain.doFilter(req, res);
+        filterChain.doFilter(request, response);
     }
 }

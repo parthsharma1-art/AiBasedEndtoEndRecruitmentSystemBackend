@@ -1,15 +1,16 @@
 package com.aibackend.AiBasedEndtoEndSystem.dto;
 
 import com.aibackend.AiBasedEndtoEndSystem.entity.User;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.bson.types.ObjectId;
 
 @Data
 public class UserDTO  {
-    private ObjectId id;
+    private String id;
     private String username;
     private String userEmail;
-    private User.Role role;
-
+    private String mobileNumber;
+    private String role;
 }
 

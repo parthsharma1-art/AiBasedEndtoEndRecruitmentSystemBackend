@@ -12,7 +12,7 @@ import java.util.List;
 public class Candidate {
 
     @Id
-    private ObjectId id;
+    private String id;
 
     private String userId;                 // link to User collection
     private String name;
