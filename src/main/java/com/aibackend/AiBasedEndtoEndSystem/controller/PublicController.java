@@ -1,9 +1,7 @@
 package com.aibackend.AiBasedEndtoEndSystem.controller;
 
-import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
 import com.aibackend.AiBasedEndtoEndSystem.util.SecurityUtils;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
-import com.aibackend.AiBasedEndtoEndSystem.entity.User;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
 import com.aibackend.AiBasedEndtoEndSystem.service.UserService;
 import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
@@ -32,8 +30,8 @@ public class PublicController {
     }
 
     @PostMapping("/login")
-    public UserResponse login(@RequestBody LoginRequest login) throws Exception{
-        UserDTO user = userService.getUserByMobileNumber(login.getMobileNumber());
+    public UserResponse login(@RequestBody LoginRequest request) throws Exception{
+        UserDTO user = userService.getUserByMobileNumber(request);
         user.setRole("User");
         JwtUtil.Token token = jwtUtil.generateClientToken(user);
         return toUserResponse(user,token);
@@ -79,5 +77,6 @@ public class PublicController {
     @Data
     public static class LoginRequest {
         private String mobileNumber;
+        private String email;
     }
 }

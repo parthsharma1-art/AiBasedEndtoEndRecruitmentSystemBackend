@@ -11,4 +11,7 @@ import java.util.Optional;
 public interface RecruiterRepository extends MongoRepository<Recruiter, String> {
     Optional<Recruiter> findByMobileNumber(String mobileNumber);
 
+    Optional<Recruiter> findByEmail(String email);
+
+
 }

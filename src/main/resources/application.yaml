@@ -7,3 +7,14 @@ server:
   port: 8081
   servlet:
     context-path: /api
+
+app:
+  oauth2:
+    client:
+      registration:
+        google:
+          provider: google
+          client-id: 933277047426-lc7eeb96h30umrm6qfoncp6l27026s07.apps.googleusercontent.com
+          client-secret: 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
+          redirectUriForRecruiter: http://localhost:8081/api/recruiter/google/login
+          redirectUriForCandidate: http://localhost:8081/api/candidate/google/login
