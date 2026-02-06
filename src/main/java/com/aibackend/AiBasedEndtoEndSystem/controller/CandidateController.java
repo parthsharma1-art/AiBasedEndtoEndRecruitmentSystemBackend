@@ -4,6 +4,7 @@ import com.aibackend.AiBasedEndtoEndSystem.dto.CandidateRequest;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Candidate;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
+import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
 import com.aibackend.AiBasedEndtoEndSystem.service.CandidateService;
 import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
 import com.aibackend.AiBasedEndtoEndSystem.util.SecurityUtils;
@@ -29,7 +30,7 @@ public class CandidateController {
 
     @PostMapping("/create")
     public PublicController.UserResponse createNewHR(@RequestBody CandidateRequest request) throws Exception {
-        log.info("New Hr Details :{}", request);
+        log.info("New Candidate Details :{}", request);
         UserDTO candidateDto = candidateService.createNewCandidate(request);
         candidateDto.setRole("Candidate");
         JwtUtil.Token token = jwtUtil.generateClientToken(candidateDto);

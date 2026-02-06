@@ -40,9 +40,9 @@ public class PublicController {
     public UserResponse toUserResponse(UserDTO user, JwtUtil.Token token){
         UserResponse response=new UserResponse();
         response.setId(user.getId());
-        response.setUserEmail(user.getUserEmail());
-        response.setUserMobileNumber(user.getMobileNumber());
-        response.setUserName(user.getUsername());
+        response.setEmail(user.getUserEmail());
+        response.setMobileNumber(user.getMobileNumber());
+        response.setName(user.getUsername());
         response.setToken(token);
         return response;
     }
@@ -50,9 +50,9 @@ public class PublicController {
     @Data
     public static class UserResponse{
         private String id;
-        private String userName;
-        private String userEmail;
-        private String userMobileNumber;
+        private String name;
+        private String email;
+        private String mobileNumber;
         private JwtUtil.Token token;
     }
 

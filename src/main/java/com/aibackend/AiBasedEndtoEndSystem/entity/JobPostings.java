@@ -20,10 +20,11 @@ public class JobPostings {
     private JobType jobType;
     private Integer experienceRequired;
     private String postBy;   // recruiter Id
+    private String companyId;
     private Instant createdAt;
-    private Instant createdBy;
+    private String createdBy;
     private Instant updatedAt;
-    private Instant updatedBy;
+    private String updatedBy;
     private boolean isActive;
 
 

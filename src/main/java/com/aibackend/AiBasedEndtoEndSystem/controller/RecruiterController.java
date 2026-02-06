@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 
+@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/recruiter")
 @Slf4j
@@ -25,7 +26,7 @@ public class RecruiterController {
     private PublicController publicController;
 
     @PostMapping("/create")
-    public PublicController.UserResponse createNewHR(@RequestBody RecruiterRequest request) throws Exception {
+    public PublicController.UserResponse createNewHR(@RequestBody RecruiterRequest request) {
         log.info("New Hr Details :{}", request);
         UserDTO userDTO = recruiterService.createNewRecruiter(request);
         userDTO.setRole("Recruiter");
@@ -35,7 +36,7 @@ public class RecruiterController {
 
     @PostMapping("/login")
     public PublicController.UserResponse createNewHR(@RequestBody PublicController.LoginRequest request) throws Exception {
-        log.info("New Hr Details :{}", request);
+        log.info("Recruiter login request :{}", request);
         UserDTO userDTO = recruiterService.getUserLogin(request);
         userDTO.setRole("Recruiter");
         JwtUtil.Token token = jwtUtil.generateClientToken(userDTO);
@@ -47,16 +48,16 @@ public class RecruiterController {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             throw new BadException("Missing or invalid Authorization header");
         }
-        String token = authHeader.substring(7); // remove "Bearer "
+        String token = authHeader.substring(7);
         String id = jwtUtil.extractUserObjectId(token);
-        log.info("Id for the candiate is :{}", id);
+        log.info("Id for the recruiter is :{}", id);
         log.info("Token for the Recruiter :{}", token);
         return SecurityUtils.getLoggedInUser(token, jwtUtil.getKey());
     }
 
     @GetMapping("/google/login")
     public PublicController.UserResponse googleCallback(@RequestParam("code") String code) throws IOException {
-        log.info("Code :{}",code);
+        log.info("Code :{}", code);
         return recruiterService.googleHostCallback(code);
 
     }

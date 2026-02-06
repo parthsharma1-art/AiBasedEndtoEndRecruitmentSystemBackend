@@ -27,7 +27,7 @@ import java.util.Optional;
 @Slf4j
 public class RecruiterService {
     @Autowired
-    private RecruiterRepository hrRepository;
+    private RecruiterRepository repository;
     @Autowired
     private UserService userService;
     @Autowired
@@ -40,11 +40,13 @@ public class RecruiterService {
     private JwtUtil jwtUtil;
     @Autowired
     private PublicController publicController;
+    @Autowired
+    private CompanyProfileService companyProfileService;
 
     public UserDTO createNewRecruiter(RecruiterController.RecruiterRequest request) {
         Recruiter recruiter = new Recruiter();
         validateRequest(request);
-        Optional<Recruiter> existing = hrRepository.findByMobileNumber(request.getMobileNumber());
+        Optional<Recruiter> existing = repository.findByMobileNumber(request.getMobileNumber());
         if (existing.isPresent()) {
             return userService.toRecruiterDTO(existing.get());
         }
@@ -54,13 +56,19 @@ public class RecruiterService {
         recruiter.setDesignation(request.getDesignation());
         recruiter.setEmail(request.getEmail());
         recruiter.setMobileNumber(request.getMobileNumber());
-        recruiter = hrRepository.save(recruiter);
+        recruiter = save(recruiter);
+        companyProfileService.createCompanyProfile(recruiter);
         return userService.toRecruiterDTO(recruiter);
+    }
+
+    public Recruiter save(Recruiter recruiter) {
+        log.info("Saving recruiter details ");
+        return repository.save(recruiter);
     }
 
     public Recruiter getHrByMobileNumber(String mobileNumber) {
         log.info("Hr Mobile Number :{}", mobileNumber);
-        Optional<Recruiter> hr = hrRepository.findByMobileNumber(mobileNumber);
+        Optional<Recruiter> hr = repository.findByMobileNumber(mobileNumber);
         if (hr.isPresent()) {
             return hr.get();
         }
@@ -69,43 +77,43 @@ public class RecruiterService {
 
     private void validateRequest(RecruiterController.RecruiterRequest request) {
         if (ObjectUtils.isEmpty(request.getName())) {
-            throw new HrException("Hr Name is required");
+            throw new HrException("Recruiter Name is required");
         }
         if (ObjectUtils.isEmpty(request.getMobileNumber())) {
-            throw new HrException("Hr Mobile Number is required");
+            throw new HrException("Recruiter Mobile Number is required");
         }
         if (ObjectUtils.isEmpty(request.getEmail())) {
-            throw new HrException("Hr Email is required");
+            throw new HrException("Recruiter Email is required");
         }
         if (ObjectUtils.isEmpty(request.getAge())) {
-            throw new HrException("Hr Age is required");
+            throw new HrException("Recruiter Age is required");
         }
         if (ObjectUtils.isEmpty(request.getState())) {
-            throw new HrException("Hr State is required");
+            throw new HrException("Recruiter State is required");
         }
         if (ObjectUtils.isEmpty(request.getCompanyName())) {
-            throw new HrException("Hr Company Name is required");
+            throw new HrException("Recruiter Company Name is required");
         }
         if (ObjectUtils.isEmpty(request.getCountry())) {
-            throw new HrException("Hr Country is required");
+            throw new HrException("Recruiter Country is required");
         }
         if (ObjectUtils.isEmpty(request.getDesignation())) {
-            throw new HrException("Hr Designation is required");
+            throw new HrException("Recruiter Designation is required");
         }
     }
 
     public Recruiter findById(String id) {
         log.info("Get Hr BY id : {}", id);
-        return hrRepository.findById(id).orElse(null);
+        return repository.findById(id).orElse(null);
     }
 
     public UserDTO getUserLogin(PublicController.LoginRequest request) {
         log.info("User mobile Number :{}", request);
         Optional<Recruiter> recruiter = null;
         if (!ObjectUtils.isEmpty(request.getMobileNumber())) {
-            recruiter = hrRepository.findByMobileNumber(request.getMobileNumber());
+            recruiter = repository.findByMobileNumber(request.getMobileNumber());
         } else {
-            recruiter = hrRepository.findByEmail(request.getEmail());
+            recruiter = repository.findByEmail(request.getEmail());
         }
         if (recruiter.isPresent()) {
             return userService.toRecruiterDTO(recruiter.get());
@@ -115,7 +123,7 @@ public class RecruiterService {
     }
 
     public Recruiter findByEmail(String email) {
-        Optional<Recruiter> existing = hrRepository.findByEmail(email);
+        Optional<Recruiter> existing = repository.findByEmail(email);
         if (existing.isPresent()) {
             return existing.get();
         }
@@ -153,7 +161,7 @@ public class RecruiterService {
             if (ObjectUtils.isEmpty(recruiter)) {
                 recruiter.setId(uniqueUtiliy.getNextNumber("RECRUITER", "hr"));
                 recruiter.setEmail(email);
-                recruiter = hrRepository.save(recruiter);
+                recruiter = repository.save(recruiter);
             }
             UserDTO userDTO = new UserDTO();
             userDTO.setId(recruiter.getId());
