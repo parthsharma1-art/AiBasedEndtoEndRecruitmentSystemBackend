@@ -41,16 +41,13 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
         final String authHeader = request.getHeader("Authorization");
         String jwt = null;
-
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             jwt = authHeader.substring(7);
         }
-
         if (jwt != null) {
             try {
                 Claims claims = jwtUtil.extractAllClaims(jwt);
                 log.info("ALL CLAIMS: {}", claims);
-
                 if (claims != null) {
                     String userId = claims.getSubject().trim();
                     String role = claims.get("role", String.class);

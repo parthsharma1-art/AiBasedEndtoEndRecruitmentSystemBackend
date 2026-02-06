@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 
-@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/recruiter")
 @Slf4j
@@ -50,8 +49,6 @@ public class RecruiterController {
         }
         String token = authHeader.substring(7);
         String id = jwtUtil.extractUserObjectId(token);
-        log.info("Id for the recruiter is :{}", id);
-        log.info("Token for the Recruiter :{}", token);
         return SecurityUtils.getLoggedInUser(token, jwtUtil.getKey());
     }
 

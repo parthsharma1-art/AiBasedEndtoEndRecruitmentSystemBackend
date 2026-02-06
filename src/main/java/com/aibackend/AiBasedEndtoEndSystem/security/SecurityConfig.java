@@ -38,7 +38,7 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // 🔥 GLOBAL CORS CONFIG (MOST IMPORTANT)
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
