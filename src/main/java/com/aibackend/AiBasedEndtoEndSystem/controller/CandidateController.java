@@ -4,13 +4,17 @@ import com.aibackend.AiBasedEndtoEndSystem.dto.CandidateRequest;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Candidate;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
+import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
 import com.aibackend.AiBasedEndtoEndSystem.service.CandidateService;
 import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
 import com.aibackend.AiBasedEndtoEndSystem.util.SecurityUtils;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/candidate")
@@ -26,7 +30,7 @@ public class CandidateController {
 
     @PostMapping("/create")
     public PublicController.UserResponse createNewHR(@RequestBody CandidateRequest request) throws Exception {
-        log.info("New Hr Details :{}", request);
+        log.info("New Candidate Details :{}", request);
         UserDTO candidateDto = candidateService.createNewCandidate(request);
         candidateDto.setRole("Candidate");
         JwtUtil.Token token = jwtUtil.generateClientToken(candidateDto);
@@ -34,8 +38,8 @@ public class CandidateController {
     }
 
     @PostMapping("/login")
-    public PublicController.UserResponse login(@RequestBody PublicController.LoginRequest login) throws Exception {
-        UserDTO user = candidateService.getCandidateByMobileNumber(login.getMobileNumber());
+    public PublicController.UserResponse login(@RequestBody PublicController.LoginRequest request) throws Exception {
+        UserDTO user = candidateService.getCandidateByMobileNumber(request);
         user.setRole("Candidate");
         JwtUtil.Token token = jwtUtil.generateClientToken(user);
         log.info("The token generated for login :{}", token);
@@ -66,6 +70,19 @@ public class CandidateController {
         private String email;
         private String mobileNumber;
         private String resumeUrl;
+    }
+
+    @GetMapping("/google/login")
+    public PublicController.UserResponse googleCallback(@RequestParam("code") String code) throws IOException {
+        log.info("Code :{}",code);
+        return candidateService.googleHostCallback(code);
+
+    }
+
+    @GetMapping("/google/login-url-candidate")
+    public void getGoogleLoginUrlHost(HttpServletResponse response) throws Exception {
+        String googleAuthUrl = candidateService.getGoogleLoginUrlHost();
+        response.sendRedirect(googleAuthUrl);
     }
 
 }

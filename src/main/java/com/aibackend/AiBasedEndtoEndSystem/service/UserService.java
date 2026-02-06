@@ -71,10 +71,15 @@ public class UserService {
     }
 
 
-    public UserDTO getUserByMobileNumber(String mobileNumber) {
-        Optional<User> user = userRepository.findByMobileNumber(mobileNumber);
+    public UserDTO getUserByMobileNumber(PublicController.LoginRequest request) {
+        Optional<User> user=null;
+        if(!ObjectUtils.isEmpty(request.getMobileNumber())){
+            user = userRepository.findByMobileNumber(request.getMobileNumber());
+        }else{
+            user=userRepository.findByEmail(request.getEmail());
+        }
         if (ObjectUtils.isEmpty(user)) {
-            throw new UserNotFoundException("This User do not exist " + mobileNumber);
+            throw new UserNotFoundException("This User do not exist " + request);
         }
         return toUserDTO(user.get());
     }
