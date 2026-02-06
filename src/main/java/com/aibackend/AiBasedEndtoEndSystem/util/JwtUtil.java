@@ -33,7 +33,8 @@ public class JwtUtil {
     private Integer adminTokenExpiryInSeconds = 72 * 60 * 60;
 
     public Token generateClientToken(UserDTO userDTO) {
-        try{log.info("generate client Token request : {}", userDTO);
+        try {
+            log.info("generate client Token request : {}", userDTO);
             if (ObjectUtils.isEmpty(userDTO.getId())) {
                 throw new BadException("Invalid user");
             }
@@ -46,7 +47,7 @@ public class JwtUtil {
                     .claim("userName", userDTO.getUsername())
                     .claim("userEmail", userDTO.getUserEmail())
                     .claim("userMobileNumber", userDTO.getMobileNumber())
-                    .claim("role",userDTO.getRole())
+                    .claim("role", userDTO.getRole())
                     .setIssuedAt(new Date(now))
                     .setExpiration(new Date(expiryMillis))
                     .signWith(key, SignatureAlgorithm.HS256)
@@ -55,9 +56,9 @@ public class JwtUtil {
             token.setAuthKey(jwt);
             return token;
 
-        }catch (Exception e){
+        } catch (Exception e) {
             log.info("FAiled to create token");
-            return  null;
+            return null;
         }
     }
 
@@ -69,6 +70,18 @@ public class JwtUtil {
                 .parseClaimsJws(token)
                 .getBody();
     }
+
+    public boolean invalidateToken(String token) {
+        try {
+            Claims claims = extractAllClaims(token);
+            log.info("Token for user {} invalidated", claims.getSubject());
+            return true;
+        } catch (Exception e) {
+            log.warn("Failed to invalidate token: {}", e.getMessage());
+            return false;
+        }
+    }
+
 
     public String extractUserObjectId(String token) {
         Claims claims = extractAllClaims(token);

@@ -13,10 +13,12 @@ import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtiliy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -32,7 +34,7 @@ public class CompanyProfileService {
     @Autowired
     private JobPostingService jobPostingService;
 
-    public CompanyProfileResponse createCompanyProfile(Recruiter recruiter) {
+    public CompanyProfileResponse createCompanyProfileByRecruiter(Recruiter recruiter) {
         log.info("Creating new company profile for recruiter id :{}", recruiter.getId());
         Optional<CompanyProfile> exist = repository.getCompanyProfileByRecruiterId(recruiter.getId());
         if (exist.isPresent()) {
@@ -131,5 +133,14 @@ public class CompanyProfileService {
         log.info("Request coming from frontend :{}", request);
         JobPostings jopPosting = jobPostingService.createJob(request, companyProfile);
         return new CompanyProfileController.JobPostingsResponse(jopPosting);
+    }
+
+    public CompanyProfile getCompanyProfileById(String id) {
+        log.info("Get company profile by id :{}", id);
+        Optional<CompanyProfile> companyProfile = repository.findById(id);
+        if (companyProfile.isEmpty()) {
+            return null;
+        }
+        return companyProfile.get();
     }
 }

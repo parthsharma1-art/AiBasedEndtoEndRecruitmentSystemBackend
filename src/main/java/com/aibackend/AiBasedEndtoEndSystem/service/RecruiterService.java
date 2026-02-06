@@ -1,9 +1,11 @@
 package com.aibackend.AiBasedEndtoEndSystem.service;
 
 import com.aibackend.AiBasedEndtoEndSystem.config.GoogleAuthConfig;
+import com.aibackend.AiBasedEndtoEndSystem.controller.CompanyProfileController;
 import com.aibackend.AiBasedEndtoEndSystem.controller.PublicController;
 import com.aibackend.AiBasedEndtoEndSystem.controller.RecruiterController;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
+import com.aibackend.AiBasedEndtoEndSystem.entity.CompanyProfile;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
 import com.aibackend.AiBasedEndtoEndSystem.entity.User;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
@@ -57,7 +59,8 @@ public class RecruiterService {
         recruiter.setEmail(request.getEmail());
         recruiter.setMobileNumber(request.getMobileNumber());
         recruiter = save(recruiter);
-        companyProfileService.createCompanyProfile(recruiter);
+        CompanyProfileController.CompanyProfileResponse resoponse = companyProfileService.createCompanyProfileByRecruiter(recruiter);
+        log.info("Company profile response : {}", resoponse);
         return userService.toRecruiterDTO(recruiter);
     }
 
@@ -201,6 +204,28 @@ public class RecruiterService {
 
         log.info("Generated Google Login URL: {}", googleAuthUrlForHost);
         return googleAuthUrlForHost;
+
+    }
+
+    public RecruiterController.RecruiterResponse getRecruiterDetails(UserDTO user) {
+        log.info("Get details for the user :{}", user);
+        Optional<Recruiter> optionalRecruiter = repository.findById(user.getId());
+        if (optionalRecruiter.isEmpty()) {
+            log.error("Recruiter not found for the id :{}", user.getId());
+        }
+        Recruiter recruiter = optionalRecruiter.get();
+        CompanyProfile companyProfile = null;
+        if (!ObjectUtils.isEmpty(recruiter.getCompanyId())) {
+            companyProfile = companyProfileService.getCompanyProfileById(recruiter.getCompanyId());
+        }
+        RecruiterController.RecruiterResponse response = new RecruiterController.RecruiterResponse();
+        response.setId(recruiter.getId());
+        response.setName(recruiter.getName());
+        response.setCompanyId(companyProfile.getId());
+        response.setEmail(recruiter.getEmail());
+        response.setMobileNumber(recruiter.getMobileNumber());
+        response.setCompanyName(companyProfile.getBasicSetting().getCompanyName());
+        return response;
 
     }
 }
