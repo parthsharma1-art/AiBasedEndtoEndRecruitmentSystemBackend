@@ -117,10 +117,7 @@ public class CompanyProfileService {
     public CompanyProfile getCompanyProfileByRecruiterId(String recruiterId) {
         log.info("Get company profile for the recruiter :{}", recruiterId);
         Optional<CompanyProfile> companyProfile = repository.getCompanyProfileByRecruiterId(recruiterId);
-        if(companyProfile.isEmpty()){
-            return null;
-        }
-        return companyProfile.get();
+        return companyProfile.orElse(null);
     }
 
     public CompanyProfileController.JobPostingsResponse createJobPosting(UserDTO user, CompanyProfileController.JobPostingsRequest request) {

@@ -1,12 +1,9 @@
 package com.aibackend.AiBasedEndtoEndSystem.util;
 
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
-import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.context.SecurityContextHolder;
-
 import java.security.Key;
 
 @Slf4j

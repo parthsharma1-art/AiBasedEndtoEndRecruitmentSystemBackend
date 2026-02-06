@@ -6,7 +6,6 @@ import com.aibackend.AiBasedEndtoEndSystem.entity.User;
 import com.aibackend.AiBasedEndtoEndSystem.repository.CandidateRepository;
 import com.aibackend.AiBasedEndtoEndSystem.repository.RecruiterRepository;
 import com.aibackend.AiBasedEndtoEndSystem.repository.UserRepository;
-import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
