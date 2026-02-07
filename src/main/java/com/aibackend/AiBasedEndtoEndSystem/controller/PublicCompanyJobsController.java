@@ -29,9 +29,15 @@ public class PublicCompanyJobsController {
 
     }
 
+    @GetMapping("/profiles")
+    public List<CompanyProfileController.CompanyProfileResponse> getAllCompanyProfiles() {
+        log.info("Get all company profiles");
+        return companyProfileService.getAllCompanyProfiles();
+    }
+
     @GetMapping("/{subdomain}")
     public CompanyProfileController.CompanyProfileResponse getCompanyBySubdomain(@PathVariable String subdomain) {
-        log.info("Subdomain is :{}",subdomain);
+        log.info("Subdomain is :{}", subdomain);
         return companyProfileService.getDetailsByCompanyDomain(subdomain);
     }
 

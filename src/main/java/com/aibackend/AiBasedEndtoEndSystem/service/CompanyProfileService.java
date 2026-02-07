@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -142,9 +143,16 @@ public class CompanyProfileService {
     public CompanyProfile getCompanyProfileById(String id) {
         log.info("Get company profile by id :{}", id);
         Optional<CompanyProfile> companyProfile = repository.findById(id);
-        if (companyProfile.isEmpty()) {
-            return null;
+        return companyProfile.orElse(null);
+    }
+
+    public List<CompanyProfileResponse> getAllCompanyProfiles() {
+        log.info("get all the company profiles for the candidates");
+        List<CompanyProfileResponse> responses = new ArrayList<>();
+        List<CompanyProfile> companyProfiles = repository.findAll();
+        for (CompanyProfile profile : companyProfiles) {
+            responses.add(toResponse(profile));
         }
-        return companyProfile.get();
+        return responses;
     }
 }
