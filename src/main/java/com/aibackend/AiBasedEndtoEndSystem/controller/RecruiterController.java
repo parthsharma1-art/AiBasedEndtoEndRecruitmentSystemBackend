@@ -90,8 +90,18 @@ public class RecruiterController {
         } catch (Exception e) {
             log.info("Failed to logout");
             return Boolean.FALSE;
-
         }
+    }
+
+    @GetMapping("/overview")
+    public RecruiterOverview getOverviewPage(@RequestHeader("Authorization") String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new BadException("Missing or invalid Authorization header");
+        }
+        String token = authHeader.substring(7);
+        String id = jwtUtil.extractUserObjectId(token);
+        UserDTO userDTO = SecurityUtils.getLoggedInUser(token, jwtUtil.getKey());
+        return recruiterService.getRecruiterOverview(userDTO);
     }
 
     @Data
@@ -103,5 +113,13 @@ public class RecruiterController {
         private String companyId;
         private String companyName;
 
+    }
+
+    @Data
+    public static class RecruiterOverview{
+        private Integer totalJobs;
+        private Integer totalCandidates;
+        private Integer totalResumes;
+        private Integer activeJobs;
     }
 }

@@ -6,6 +6,7 @@ import com.aibackend.AiBasedEndtoEndSystem.controller.PublicCompanyJobsControlle
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.CompanyProfile;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
+import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
 import com.aibackend.AiBasedEndtoEndSystem.repository.JobPostingRepository;
 import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtiliy;
 import lombok.extern.slf4j.Slf4j;
@@ -52,6 +53,14 @@ public class JobPostingService {
         log.info("Saving new job for the id :{}", jobPostings.getId());
         return repository.save(jobPostings);
 
+    }
+
+    public List<JobPostings> getAllJobPostings(Recruiter recruiter) {
+        CompanyProfile companyProfile = companyProfileService.getCompanyProfileByRecruiterId(recruiter.getId());
+        if (ObjectUtils.isEmpty(companyProfile)) {
+            return null;
+        }
+        return repository.findByCompanyId(companyProfile.getId());
     }
 
     public List<CompanyProfileController.JobPostingsResponse> getAllJobs(UserDTO user) {
