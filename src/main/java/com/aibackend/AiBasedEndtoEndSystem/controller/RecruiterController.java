@@ -43,13 +43,14 @@ public class RecruiterController {
     }
 
     @GetMapping("/get")
-    public UserDTO getUser(@RequestHeader("Authorization") String authHeader) {
+    public RecruiterResponse getUser(@RequestHeader("Authorization") String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             throw new BadException("Missing or invalid Authorization header");
         }
         String token = authHeader.substring(7);
         String id = jwtUtil.extractUserObjectId(token);
-        return SecurityUtils.getLoggedInUser(token, jwtUtil.getKey());
+        UserDTO userDTO = SecurityUtils.getLoggedInUser(token, jwtUtil.getKey());
+        return recruiterService.getRecruiterDetails(userDTO);
     }
 
     @GetMapping("/google/login")
@@ -75,5 +76,32 @@ public class RecruiterController {
         private String state;
         private String country;
         private String designation;
+    }
+
+    @PostMapping("/logout")
+    public Boolean logout(@RequestHeader("Authorization") String authHeader) {
+        try {
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                String token = authHeader.substring(7);
+                return jwtUtil.invalidateToken(token);
+            } else {
+                return Boolean.FALSE;
+            }
+        } catch (Exception e) {
+            log.info("Failed to logout");
+            return Boolean.FALSE;
+
+        }
+    }
+
+    @Data
+    public static class RecruiterResponse {
+        private String id;
+        private String name;
+        private String email;
+        private String mobileNumber;
+        private String companyId;
+        private String companyName;
+
     }
 }

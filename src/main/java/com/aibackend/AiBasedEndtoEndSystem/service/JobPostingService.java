@@ -1,6 +1,8 @@
 package com.aibackend.AiBasedEndtoEndSystem.service;
 
 import com.aibackend.AiBasedEndtoEndSystem.controller.CompanyProfileController;
+import com.aibackend.AiBasedEndtoEndSystem.controller.PublicCompanyJobsController;
+import com.aibackend.AiBasedEndtoEndSystem.controller.PublicCompanyJobsController.PublicJobResponse;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.CompanyProfile;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
@@ -64,6 +66,28 @@ public class JobPostingService {
             responses.add(new CompanyProfileController.JobPostingsResponse(postings));
         }
         return responses;
+    }
 
+
+    public List<PublicJobResponse> getAllJobs() {
+        log.info("Get all jobs for the Public website");
+        List<JobPostings> allJObsPosting = repository.findByIsActiveTrue(Boolean.TRUE);
+        List<PublicJobResponse> responses = new ArrayList<>();
+        for (JobPostings jobPostings : allJObsPosting) {
+            CompanyProfile companyProfile = companyProfileService.getCompanyProfileById(jobPostings.getCompanyId());
+            if (ObjectUtils.isEmpty(companyProfile)) {
+                log.info("Company profile not found");
+                continue;
+            }
+            PublicJobResponse response = new PublicJobResponse();
+            response.setId(jobPostings.getId());
+            response.setRecruiterId(companyProfile.getRecruiterId());
+            response.setCompanyId(companyProfile.getId());
+            response.setCompanyName(companyProfile.getBasicSetting().getCompanyName());
+            response.setCompanyDomain(companyProfile.getBasicSetting().getCompanyDomain());
+            response.setJobPostingsResponse(new CompanyProfileController.JobPostingsResponse(jobPostings));
+            responses.add(response);
+        }
+        return responses;
     }
 }
