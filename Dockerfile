@@ -7,4 +7,4 @@ COPY . .
 RUN chmod +x mvnw
 RUN ./mvnw clean package -DskipTests
 
-CMD ["java", "-jar", "target/app.jar"]
+CMD ["java", "-jar", "target/AiBasedEndtoEndSystem-0.0.1-SNAPSHOT.jar"]
