@@ -4,8 +4,10 @@ import com.aibackend.AiBasedEndtoEndSystem.config.GoogleAuthConfig;
 import com.aibackend.AiBasedEndtoEndSystem.controller.CompanyProfileController;
 import com.aibackend.AiBasedEndtoEndSystem.controller.PublicController;
 import com.aibackend.AiBasedEndtoEndSystem.controller.RecruiterController;
+import com.aibackend.AiBasedEndtoEndSystem.controller.RecruiterController.RecruiterOverview;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.CompanyProfile;
+import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
 import com.aibackend.AiBasedEndtoEndSystem.entity.User;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
@@ -22,6 +24,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -44,6 +47,8 @@ public class RecruiterService {
     private PublicController publicController;
     @Autowired
     private CompanyProfileService companyProfileService;
+    @Autowired
+    private JobPostingService jobPostingService;
 
     public UserDTO createNewRecruiter(RecruiterController.RecruiterRequest request) {
         Recruiter recruiter = new Recruiter();
@@ -227,5 +232,32 @@ public class RecruiterService {
         response.setCompanyName(companyProfile.getBasicSetting().getCompanyName());
         return response;
 
+    }
+
+    public RecruiterOverview getRecruiterOverview(UserDTO user) {
+        log.info("Get overview page details for the user :{}", user);
+        Recruiter recruiter = findById(user.getId());
+        if (ObjectUtils.isEmpty(recruiter)) {
+            log.info("No recruiter found");
+            throw new BadException("Recruiter not found with this id " + user.getId());
+        }
+        CompanyProfile companyProfile = companyProfileService.getCompanyProfileByRecruiterId(recruiter.getId());
+        if (ObjectUtils.isEmpty(companyProfile)) {
+            log.error("No Company profile found for the recruiter :{}", recruiter.getId());
+            throw new BadException("Company profile not found for the recruiter " + recruiter.getId());
+        }
+        List<JobPostings> jobPostings = jobPostingService.getAllJobPostings(recruiter);
+        RecruiterOverview recruiterOverview = new RecruiterOverview();
+        Integer activeJobs = 0;
+        Integer totalJobs = 0;
+        for (JobPostings postings : jobPostings) {
+            if (postings.isActive()) {
+                activeJobs++;
+            }
+            totalJobs++;
+        }
+        recruiterOverview.setActiveJobs(activeJobs);
+        recruiterOverview.setTotalJobs(totalJobs);
+        return recruiterOverview;
     }
 }
