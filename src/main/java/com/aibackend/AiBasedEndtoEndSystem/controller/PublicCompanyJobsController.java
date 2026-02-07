@@ -1,10 +1,12 @@
 package com.aibackend.AiBasedEndtoEndSystem.controller;
 
+import com.aibackend.AiBasedEndtoEndSystem.service.CompanyProfileService;
 import com.aibackend.AiBasedEndtoEndSystem.service.JobPostingService;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -17,12 +19,19 @@ public class PublicCompanyJobsController {
 
     @Autowired
     private JobPostingService jobPostingService;
+    @Autowired
+    private CompanyProfileService companyProfileService;
 
     @GetMapping("/jobs")
     public List<PublicJobResponse> getAllJobs() {
         log.info("Get all public jobs for the candidate");
         return jobPostingService.getAllJobs();
 
+    }
+
+    @GetMapping("/{subdomain}")
+    public CompanyProfileController.CompanyProfileResponse getCompanyBySubdomain(@PathVariable String subdomain) {
+        return companyProfileService.getDetailsByCompanyDomain(subdomain);
     }
 
     @Data
