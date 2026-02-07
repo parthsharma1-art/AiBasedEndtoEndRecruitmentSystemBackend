@@ -99,4 +99,17 @@ public class JobPostingService {
         }
         return responses;
     }
+
+    public List<CompanyProfileController.JobPostingsResponse> allJobsByCompanyId(String companyId) {
+        log.info("Get all jobs response for the company :{}", companyId);
+        List<JobPostings> jobPostings = repository.findByCompanyId(companyId);
+        if (jobPostings.isEmpty()) {
+            return null;
+        }
+        List<CompanyProfileController.JobPostingsResponse> responses = new ArrayList<>();
+        for(JobPostings postings:jobPostings){
+            responses.add(new CompanyProfileController.JobPostingsResponse(postings));
+        }
+        return responses;
+    }
 }

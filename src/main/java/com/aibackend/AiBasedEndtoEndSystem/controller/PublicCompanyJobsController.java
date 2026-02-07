@@ -31,6 +31,7 @@ public class PublicCompanyJobsController {
 
     @GetMapping("/{subdomain}")
     public CompanyProfileController.CompanyProfileResponse getCompanyBySubdomain(@PathVariable String subdomain) {
+        log.info("Subdomain is :{}",subdomain);
         return companyProfileService.getDetailsByCompanyDomain(subdomain);
     }
 

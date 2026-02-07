@@ -113,7 +113,11 @@ public class CompanyProfileService {
             log.info("No Company profile found for this domain :{}", domain);
             return null;
         }
-        return toResponse(exist.get());
+        List<CompanyProfileController.JobPostingsResponse> jobPostings = jobPostingService.allJobsByCompanyId(exist.get().getId());
+
+        CompanyProfileResponse response = toResponse(exist.get());
+        response.setJobPostingsResponses(jobPostings);
+        return response;
     }
 
     public CompanyProfile getCompanyProfileByRecruiterId(String recruiterId) {

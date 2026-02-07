@@ -137,5 +137,6 @@ public class CompanyProfileController {
         private SocialLinks socialLinks;
         private Instant createdAt;
         private String createdBy;
+        private List<JobPostingsResponse> jobPostingsResponses;
     }
 }
