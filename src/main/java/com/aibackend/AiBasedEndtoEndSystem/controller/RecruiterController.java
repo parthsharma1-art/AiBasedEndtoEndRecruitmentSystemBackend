@@ -54,16 +54,45 @@ public class RecruiterController {
     }
 
     @GetMapping("/google/login")
-    public PublicController.UserResponse googleCallback(@RequestParam("code") String code) throws IOException {
+    public void googleCallback(@RequestParam("code") String code,HttpServletResponse response) throws IOException {
         log.info("Code :{}", code);
-        return recruiterService.googleHostCallback(code);
+        PublicController.UserResponse dto= recruiterService.googleHostCallback(code);
+//        String htmlResponse = """
+//				    <!DOCTYPE html>
+//				    <html>
+//				    <body>
+//				    <script>
+//				      const authKey = "%s";
+//				      const userId = "%s";
+//
+//					  console.log(authKey, userId);
+//				      window.opener.postMessage(
+//				        { authKey, userId },
+//				        "*"
+//				      );
+//				      window.close();
+//				    </script>
+//				    </body>
+//				    </html>
+//				""".formatted(dto.getToken().getAuthKey(), dto.getId());
+//
+//        response.setContentType("text/html");
+//        response.getWriter().write(htmlResponse);
+        String token = dto.getToken().getAuthKey();
+        String id = dto.getId();
+        String redirectUrl =
+                "http://localhost:3000/google-success?token=" + token + "&id=" + id;
+
+        response.sendRedirect(redirectUrl);
 
     }
 
     @GetMapping("/google/login-url-recruiter")
-    public void getGoogleLoginUrlHost(HttpServletResponse response) throws Exception {
+    public GoogleAuthUrl getGoogleLoginUrlHost(HttpServletResponse response) throws Exception {
         String googleAuthUrl = recruiterService.getGoogleLoginUrlHost();
-        response.sendRedirect(googleAuthUrl);
+        GoogleAuthUrl url=new GoogleAuthUrl();
+        url.setUrl(googleAuthUrl);
+        return url;
     }
 
     @Data
@@ -83,6 +112,7 @@ public class RecruiterController {
         try {
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 String token = authHeader.substring(7);
+                log.info("Token of logout :{}",token);
                 return jwtUtil.invalidateToken(token);
             } else {
                 return Boolean.FALSE;
@@ -121,5 +151,10 @@ public class RecruiterController {
         private Integer totalCandidates;
         private Integer totalResumes;
         private Integer activeJobs;
+    }
+
+    @Data
+    public  static class GoogleAuthUrl{
+        private String url;
     }
 }

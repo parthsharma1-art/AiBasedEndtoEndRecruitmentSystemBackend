@@ -18,6 +18,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 import java.util.Collections;
 
@@ -51,10 +52,10 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                 if (claims != null) {
                     String userId = claims.getSubject().trim();
                     String role = claims.get("role", String.class);
-                    log.info("Id for the user is :{}",userId);
-                    log.info("Role :{}",role);
+                    log.info("Id for the user is :{}", userId);
+                    log.info("Role :{}", role);
                     Object userEntity = switch (role) {
-                        case "User" -> userService.loadUserEntityById(userId);
+                        case "User", "USER" -> userService.loadUserEntityById(userId);
                         case "Candidate" -> userService.loadCandidateById(userId);
                         case "Recruiter" -> userService.loadRecruiterById(userId);
                         default -> throw new RuntimeException("Invalid role in token");
