@@ -174,7 +174,7 @@ public class RecruiterService {
             UserDTO userDTO = new UserDTO();
             userDTO.setId(recruiter.getId());
             userDTO.setUserEmail(recruiter.getEmail());
-            userDTO.setRole(User.Role.RECRUITER.toString());
+            userDTO.setRole("Recruiter");
             userDTO.setUsername(recruiter.getName());
             userDTO.setMobileNumber(recruiter.getMobileNumber());
             JwtUtil.Token token = jwtUtil.generateClientToken(userDTO);
