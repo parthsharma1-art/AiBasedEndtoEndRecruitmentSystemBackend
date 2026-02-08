@@ -48,7 +48,6 @@ public class RecruiterController {
             throw new BadException("Missing or invalid Authorization header");
         }
         String token = authHeader.substring(7);
-        String id = jwtUtil.extractUserObjectId(token);
         UserDTO userDTO = SecurityUtils.getLoggedInUser(token, jwtUtil.getKey());
         return recruiterService.getRecruiterDetails(userDTO);
     }
