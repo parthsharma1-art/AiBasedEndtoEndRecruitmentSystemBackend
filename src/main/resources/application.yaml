@@ -8,6 +8,10 @@ server:
   servlet:
     context-path: /api
 
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
 app:
   oauth2:
     client:
@@ -18,3 +22,12 @@ app:
           client-secret: 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
           redirectUriForRecruiter: http://localhost:8081/api/recruiter/google/login
           redirectUriForCandidate: http://localhost:8081/api/candidate/google/login
+
+app.config:
+  url:
+    baseUrl: https://localhost:8081/api
+    frontEndUrl: http://localhost:3000
+    hostFrontEndUrl: https://ai-based-endto-end-recruitment-syst.vercel.app
+
+
+
