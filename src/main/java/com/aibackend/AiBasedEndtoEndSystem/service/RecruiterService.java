@@ -9,7 +9,6 @@ import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.CompanyProfile;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
-import com.aibackend.AiBasedEndtoEndSystem.entity.User;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
 import com.aibackend.AiBasedEndtoEndSystem.exception.HrException;
 import com.aibackend.AiBasedEndtoEndSystem.repository.RecruiterRepository;
@@ -23,6 +22,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -49,8 +49,10 @@ public class RecruiterService {
     private CompanyProfileService companyProfileService;
     @Autowired
     private JobPostingService jobPostingService;
+    @Autowired
+    private FileStorageService fileStorageService;
 
-    public UserDTO createNewRecruiter(RecruiterController.RecruiterRequest request) {
+    public UserDTO createNewRecruiter(RecruiterController.RecruiterRequest request, MultipartFile profileImage, MultipartFile idCard) {
         Recruiter recruiter = new Recruiter();
         validateRequest(request);
         Optional<Recruiter> existing = repository.findByMobileNumber(request.getMobileNumber());
@@ -63,6 +65,19 @@ public class RecruiterService {
         recruiter.setDesignation(request.getDesignation());
         recruiter.setEmail(request.getEmail());
         recruiter.setMobileNumber(request.getMobileNumber());
+
+        // Save profile image
+        if (profileImage != null && !profileImage.isEmpty()) {
+            String profileImageId = fileStorageService.storeFile(request.getProfileImage());
+            recruiter.setProfileImageId(profileImageId);
+        }
+
+        // Save ID card
+        if (idCard != null && !idCard.isEmpty()) {
+            String idCardId = fileStorageService.storeFile(request.getIdCard());
+            recruiter.setIdCardFileId(idCardId);
+        }
+
         recruiter = save(recruiter);
         CompanyProfileController.CompanyProfileResponse resoponse = companyProfileService.createCompanyProfileByRecruiter(recruiter);
         log.info("Company profile response : {}", resoponse);
@@ -213,26 +228,39 @@ public class RecruiterService {
     }
 
     public RecruiterController.RecruiterResponse getRecruiterDetails(UserDTO user) {
+
         log.info("Get details for the user :{}", user);
-        Optional<Recruiter> optionalRecruiter = repository.findById(user.getId());
-        if (optionalRecruiter.isEmpty()) {
-            log.error("Recruiter not found for the id :{}", user.getId());
-        }
-        Recruiter recruiter = optionalRecruiter.get();
-        CompanyProfile companyProfile = null;
-        if (!ObjectUtils.isEmpty(recruiter.getCompanyId())) {
-            companyProfile = companyProfileService.getCompanyProfileById(recruiter.getCompanyId());
-        }
-        RecruiterController.RecruiterResponse response = new RecruiterController.RecruiterResponse();
+
+        Recruiter recruiter = repository.findById(user.getId())
+                .orElseThrow(() -> new BadException("Recruiter not found"));
+
+        RecruiterController.RecruiterResponse response =
+                new RecruiterController.RecruiterResponse();
         response.setId(recruiter.getId());
         response.setName(recruiter.getName());
-        response.setCompanyId(companyProfile.getId());
         response.setEmail(recruiter.getEmail());
         response.setMobileNumber(recruiter.getMobileNumber());
-        response.setCompanyName(companyProfile.getBasicSetting().getCompanyName());
-        return response;
+        if (recruiter.getProfileImageId() != null) {
+            response.setProfileImageUrl("/file/" + recruiter.getProfileImageId());
+        }
 
+        if (recruiter.getCompanyId() != null) {
+            CompanyProfile companyProfile =
+                    companyProfileService.getCompanyProfileById(recruiter.getCompanyId());
+            if (companyProfile != null) {
+                response.setCompanyId(companyProfile.getId());
+                if (companyProfile.getBasicSetting() != null) {
+                    response.setCompanyName(
+                            companyProfile.getBasicSetting().getCompanyName()
+                    );
+                } else {
+                    log.warn("BasicSetting is null for company {}", companyProfile.getId());
+                }
+            }
+        }
+        return response;
     }
+
 
     public RecruiterOverview getRecruiterOverview(UserDTO user) {
         log.info("Get overview page details for the user :{}", user);

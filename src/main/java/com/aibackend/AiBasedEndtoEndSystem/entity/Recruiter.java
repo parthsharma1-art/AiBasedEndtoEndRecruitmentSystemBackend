@@ -20,6 +20,10 @@ public class Recruiter {
     private String companyId;
     private String designation;
 
+    // File references
+    private String profileImageId;
+    private String idCardFileId;
+
     private Boolean active = true;
 }
 

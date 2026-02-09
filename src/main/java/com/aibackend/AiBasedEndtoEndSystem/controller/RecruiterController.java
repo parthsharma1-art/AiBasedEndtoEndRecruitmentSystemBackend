@@ -1,5 +1,7 @@
 package com.aibackend.AiBasedEndtoEndSystem.controller;
 
+import com.aibackend.AiBasedEndtoEndSystem.config.AuthAppConfig;
+import com.aibackend.AiBasedEndtoEndSystem.config.GoogleAuthConfig;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
 import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
@@ -10,6 +12,7 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 
@@ -23,11 +26,15 @@ public class RecruiterController {
     private JwtUtil jwtUtil;
     @Autowired
     private PublicController publicController;
+    @Autowired
+    private AuthAppConfig authAppConfig;
 
     @PostMapping("/create")
-    public PublicController.UserResponse createNewHR(@RequestBody RecruiterRequest request) {
+    public PublicController.UserResponse createNewHR(@ModelAttribute RecruiterRequest request,
+                                                     @RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
+                                                     @RequestPart(value = "idCard", required = false) MultipartFile idCard) {
         log.info("New Hr Details :{}", request);
-        UserDTO userDTO = recruiterService.createNewRecruiter(request);
+        UserDTO userDTO = recruiterService.createNewRecruiter(request, profileImage, idCard);
         userDTO.setRole("Recruiter");
         JwtUtil.Token token = jwtUtil.generateClientToken(userDTO);
         return publicController.toUserResponse(userDTO, token);
@@ -53,35 +60,13 @@ public class RecruiterController {
     }
 
     @GetMapping("/google/login")
-    public void googleCallback(@RequestParam("code") String code,HttpServletResponse response) throws IOException {
+    public void googleCallback(@RequestParam("code") String code, HttpServletResponse response) throws IOException {
         log.info("Code :{}", code);
-        PublicController.UserResponse dto= recruiterService.googleHostCallback(code);
-//        String htmlResponse = """
-//				    <!DOCTYPE html>
-//				    <html>
-//				    <body>
-//				    <script>
-//				      const authKey = "%s";
-//				      const userId = "%s";
-//
-//					  console.log(authKey, userId);
-//				      window.opener.postMessage(
-//				        { authKey, userId },
-//				        "*"
-//				      );
-//				      window.close();
-//				    </script>
-//				    </body>
-//				    </html>
-//				""".formatted(dto.getToken().getAuthKey(), dto.getId());
-//
-//        response.setContentType("text/html");
-//        response.getWriter().write(htmlResponse);
+        PublicController.UserResponse dto = recruiterService.googleHostCallback(code);
         String token = dto.getToken().getAuthKey();
         String id = dto.getId();
         String redirectUrl =
-                "http://localhost:3000/google-success?token=" + token + "&id=" + id;
-
+                authAppConfig.getFrontEndUrl() + "/google-success?token=" + token + "&id=" + id;
         response.sendRedirect(redirectUrl);
 
     }
@@ -89,7 +74,7 @@ public class RecruiterController {
     @GetMapping("/google/login-url-recruiter")
     public GoogleAuthUrl getGoogleLoginUrlHost(HttpServletResponse response) throws Exception {
         String googleAuthUrl = recruiterService.getGoogleLoginUrlHost();
-        GoogleAuthUrl url=new GoogleAuthUrl();
+        GoogleAuthUrl url = new GoogleAuthUrl();
         url.setUrl(googleAuthUrl);
         return url;
     }
@@ -104,6 +89,8 @@ public class RecruiterController {
         private String state;
         private String country;
         private String designation;
+        private MultipartFile profileImage;
+        private MultipartFile idCard;
     }
 
     @PostMapping("/logout")
@@ -111,7 +98,7 @@ public class RecruiterController {
         try {
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 String token = authHeader.substring(7);
-                log.info("Token of logout :{}",token);
+                log.info("Token of logout :{}", token);
                 return jwtUtil.invalidateToken(token);
             } else {
                 return Boolean.FALSE;
@@ -141,11 +128,12 @@ public class RecruiterController {
         private String mobileNumber;
         private String companyId;
         private String companyName;
+        private String profileImageUrl;
 
     }
 
     @Data
-    public static class RecruiterOverview{
+    public static class RecruiterOverview {
         private Integer totalJobs;
         private Integer totalCandidates;
         private Integer totalResumes;
@@ -153,7 +141,7 @@ public class RecruiterController {
     }
 
     @Data
-    public  static class GoogleAuthUrl{
+    public static class GoogleAuthUrl {
         private String url;
     }
 }
