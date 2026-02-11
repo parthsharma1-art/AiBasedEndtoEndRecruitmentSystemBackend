@@ -37,7 +37,7 @@ public class FileController {
             return ResponseEntity.notFound().build();
         }
 
-        GridFsResource resource = fileStorageService.getFileById(id);
+        GridFsResource resource = fileStorageService.getFile(id);
 
         try {
             byte[] data = IOUtils.toByteArray(resource.getInputStream());

@@ -31,8 +31,8 @@ public class Candidate {
     private Integer expectedSalary;
     private Integer currentSalary;
 
-    private String resumeUrl;
-    private String profileImageUrl;
+    private String resumeId;
+    private String profileImageId;
 
     private String aiOverallScore;          // overall score from resume parsing
 

@@ -9,7 +9,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 
@@ -25,14 +27,18 @@ public class CandidateController {
     @Autowired
     private PublicController publicController;
 
-    @PostMapping("/create")
-    public PublicController.UserResponse createNewHR(@RequestBody CandidateRequest request) throws Exception {
+    @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public PublicController.UserResponse createNewCandidate(
+            @ModelAttribute CandidateRequest request,
+            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
+            @RequestPart(value = "resume", required = false) MultipartFile resume) {
         log.info("New Candidate Details :{}", request);
-        UserDTO candidateDto = candidateService.createNewCandidate(request);
+        UserDTO candidateDto = candidateService.createNewCandidate(request, profileImage, resume);
         candidateDto.setRole("Candidate");
         JwtUtil.Token token = jwtUtil.generateClientToken(candidateDto);
         return publicController.toUserResponse(candidateDto, token);
     }
+
 
     @PostMapping("/login")
     public PublicController.UserResponse login(@RequestBody PublicController.LoginRequest request) throws Exception {
@@ -56,7 +62,8 @@ public class CandidateController {
         response.setName(candidate.getName());
         response.setEmail(candidate.getEmail());
         response.setMobileNumber(candidate.getMobileNumber());
-        response.setResumeUrl(candidate.getResumeUrl());
+        response.setResumeId(candidate.getResumeId());
+        response.setProfileImageId(candidate.getProfileImageId());
         return response;
     }
 
@@ -66,12 +73,13 @@ public class CandidateController {
         private String name;
         private String email;
         private String mobileNumber;
-        private String resumeUrl;
+        private String resumeId;
+        private String profileImageId;
     }
 
     @GetMapping("/google/login")
     public PublicController.UserResponse googleCallback(@RequestParam("code") String code) throws IOException {
-        log.info("Code :{}",code);
+        log.info("Code :{}", code);
         return candidateService.googleHostCallback(code);
 
     }

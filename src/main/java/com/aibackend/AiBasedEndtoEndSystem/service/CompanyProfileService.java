@@ -48,6 +48,8 @@ public class CompanyProfileService {
         profile.setCreatedBy(recruiter.getId());
         profile = save(profile);
         recruiter.setCompanyId(profile.getId());
+        CompanyProfile.BasicSetting basicSetting=new CompanyProfile.BasicSetting();
+        basicSetting.setCompanyName(recruiter.getCompanyName());
         recruiterService.save(recruiter);
         return toResponse(profile);
     }

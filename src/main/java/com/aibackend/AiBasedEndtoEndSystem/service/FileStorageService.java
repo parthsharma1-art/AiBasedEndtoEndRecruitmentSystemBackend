@@ -1,53 +1,48 @@
 package com.aibackend.AiBasedEndtoEndSystem.service;
 
 import com.mongodb.client.gridfs.model.GridFSFile;
-import lombok.extern.slf4j.Slf4j;
+import lombok.RequiredArgsConstructor;
 import org.bson.types.ObjectId;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
-//import org.springframework.data.mongodb.gridfs.GridFSFile;
+import org.springframework.data.mongodb.gridfs.GridFsOperations;
 import org.springframework.data.mongodb.gridfs.GridFsResource;
 import org.springframework.data.mongodb.gridfs.GridFsTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
-@Slf4j
+@RequiredArgsConstructor
 public class FileStorageService {
 
-    @Autowired
-    private GridFsTemplate gridFsTemplate;
+    private final GridFsTemplate gridFsTemplate;
+    private final GridFsOperations operations;
 
-
-    public String storeFile(org.springframework.web.multipart.MultipartFile file) {
+    public String storeFile(MultipartFile file) {
         try {
             ObjectId fileId = gridFsTemplate.store(
                     file.getInputStream(),
                     file.getOriginalFilename(),
                     file.getContentType()
             );
+
             return fileId.toString();
+
         } catch (Exception e) {
-            log.error("Failed to store the file", e);
-            throw new RuntimeException(e);
+            throw new RuntimeException("File upload failed", e);
         }
     }
 
-    public GridFsResource getFileById(String id) {
+    public GridFsResource getFile(String fileId) {
         try {
             GridFSFile file = gridFsTemplate.findOne(
-                    Query.query(Criteria.where("_id").is(new ObjectId(id)))
+                    Query.query(Criteria.where("_id").is(new ObjectId(fileId)))
             );
 
-            if (file == null) {
-                throw new RuntimeException("File not found");
-            }
-
-            return gridFsTemplate.getResource(file);
+            return operations.getResource(file);
 
         } catch (Exception e) {
-            log.error("Failed to retrieve file", e);
-            throw new RuntimeException(e);
+            throw new RuntimeException("File not found", e);
         }
     }
 }

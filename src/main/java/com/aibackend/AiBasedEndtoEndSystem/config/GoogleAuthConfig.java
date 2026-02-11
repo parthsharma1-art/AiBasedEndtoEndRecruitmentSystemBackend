@@ -20,5 +20,4 @@ public class GoogleAuthConfig {
 
     @Value("${app.oauth2.client.registration.google.redirectUriForCandidate}")
     private String redirectUriForCandidate;
-
 }
