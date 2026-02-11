@@ -5,7 +5,6 @@ import com.aibackend.AiBasedEndtoEndSystem.controller.PublicController;
 import com.aibackend.AiBasedEndtoEndSystem.dto.CandidateRequest;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Candidate;
-import com.aibackend.AiBasedEndtoEndSystem.entity.User;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
 import com.aibackend.AiBasedEndtoEndSystem.repository.CandidateRepository;
 import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
@@ -18,7 +17,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.client.RestTemplate;
-
+import org.springframework.web.multipart.MultipartFile;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
@@ -40,11 +39,13 @@ public class CandidateService {
     private JwtUtil jwtUtil;
     @Autowired
     private PublicController publicController;
+    @Autowired
+    private FileStorageService fileStorageService;
 
-    public UserDTO createNewCandidate(CandidateRequest request) {
+    public UserDTO createNewCandidate(CandidateRequest request, MultipartFile profileImage, MultipartFile resume) {
         log.info("Create new candidate :{}", request);
         validateRequest(request);
-        Optional<Candidate> existing = candidateRepository.findByMobileNumber(request.getMobileNumber());
+        Optional<Candidate> existing = candidateRepository.findByEmail(request.getEmail());
         if (existing.isPresent()) {
             return userService.toCandidateDTO(existing.get());
         }
@@ -67,19 +68,24 @@ public class CandidateService {
         candidate.setExperienceYears(request.getExperienceYears());
         candidate.setHighestQualification(request.getHighestQualification());
         candidate.setCurrentJobRole(request.getCurrentJobRole());
-        candidate.setCurrentCompany(null); // not provided in request; set later if needed
+        candidate.setCurrentCompany(null);
         candidate.setExpectedSalary(request.getExpectedSalary());
-        candidate.setCurrentSalary(null); // unknown at signup
-        candidate.setResumeUrl(request.getResumeUrl());
-        candidate.setProfileImageUrl(request.getProfileImageUrl());
+        candidate.setCurrentSalary(null);
+        candidate.setResumeId(request.getResumeUrl());
+        if (profileImage != null && !profileImage.isEmpty()) {
+            String profileImageId = fileStorageService.storeFile(profileImage);
+            candidate.setProfileImageId(profileImageId);
+        }
+        if (resume != null && !resume.isEmpty()) {
+            String resumeId = fileStorageService.storeFile(resume);
+            candidate.setResumeId(resumeId);
+        }
         candidateRepository.save(candidate);
         log.info("Saved Candidate :{}", candidate);
         return userService.toCandidateDTO(candidate);
-
     }
 
     private void validateRequest(CandidateRequest request) {
-
 
         if (ObjectUtils.isEmpty(request.getName())) throw new BadException("Name is required");
         if (ObjectUtils.isEmpty(request.getEmail())) throw new BadException("Email is required");
@@ -101,14 +107,6 @@ public class CandidateService {
         if (ObjectUtils.isEmpty(request.getHighestQualification()))
             throw new BadException("Highest qualification is required");
 
-        if (ObjectUtils.isEmpty(request.getCurrentJobRole()))
-            throw new BadException("Current job role is required");
-
-        if (ObjectUtils.isEmpty(request.getResumeUrl()))
-            throw new BadException("Resume URL is required");
-
-        if (request.getExpectedSalary() == null || request.getExpectedSalary() <= 0)
-            throw new BadException("Expected salary must be valid");
 
     }
 

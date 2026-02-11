@@ -68,13 +68,13 @@ public class RecruiterService {
 
         // Save profile image
         if (profileImage != null && !profileImage.isEmpty()) {
-            String profileImageId = fileStorageService.storeFile(request.getProfileImage());
+            String profileImageId = fileStorageService.storeFile(profileImage);
             recruiter.setProfileImageId(profileImageId);
         }
 
         // Save ID card
         if (idCard != null && !idCard.isEmpty()) {
-            String idCardId = fileStorageService.storeFile(request.getIdCard());
+            String idCardId = fileStorageService.storeFile(idCard);
             recruiter.setIdCardFileId(idCardId);
         }
 

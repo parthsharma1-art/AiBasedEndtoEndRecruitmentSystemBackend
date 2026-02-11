@@ -3,14 +3,21 @@ spring:
     mongodb:
       uri: mongodb+srv://parthsharma2640:7817971083%40ps@cluster0.du0knbh.mongodb.net/?retryWrites=true&w=majority
       database: aibasedendtoendsystem
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 50MB
+      max-request-size: 100MB
+
 server:
   port: 8081
   servlet:
     context-path: /api
 
-    multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
+  tomcat:
+    max-swallow-size: -1
+    max-http-form-post-size: 100MB
+
 
 app:
   oauth2:

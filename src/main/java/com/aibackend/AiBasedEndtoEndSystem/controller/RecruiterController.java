@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -29,16 +30,18 @@ public class RecruiterController {
     @Autowired
     private AuthAppConfig authAppConfig;
 
-    @PostMapping("/create")
-    public PublicController.UserResponse createNewHR(@ModelAttribute RecruiterRequest request,
-                                                     @RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
-                                                     @RequestPart(value = "idCard", required = false) MultipartFile idCard) {
-        log.info("New Hr Details :{}", request);
+    @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public PublicController.UserResponse createNewHR(
+            @ModelAttribute RecruiterRequest request,
+            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
+            @RequestPart(value = "idCard", required = false) MultipartFile idCard) {
+
         UserDTO userDTO = recruiterService.createNewRecruiter(request, profileImage, idCard);
         userDTO.setRole("Recruiter");
         JwtUtil.Token token = jwtUtil.generateClientToken(userDTO);
         return publicController.toUserResponse(userDTO, token);
     }
+
 
     @PostMapping("/login")
     public PublicController.UserResponse createNewHR(@RequestBody PublicController.LoginRequest request) throws Exception {
@@ -89,8 +92,6 @@ public class RecruiterController {
         private String state;
         private String country;
         private String designation;
-        private MultipartFile profileImage;
-        private MultipartFile idCard;
     }
 
     @PostMapping("/logout")
