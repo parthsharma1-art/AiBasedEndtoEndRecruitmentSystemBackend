@@ -4,6 +4,7 @@ import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.time.Instant;
 import java.util.List;
 
 @Data
@@ -35,6 +36,8 @@ public class Candidate {
     private String profileImageId;
 
     private String aiOverallScore;          // overall score from resume parsing
+    private Instant createdAt;
+    private Instant updatedAt;
 
     @Data
     public static class Location {

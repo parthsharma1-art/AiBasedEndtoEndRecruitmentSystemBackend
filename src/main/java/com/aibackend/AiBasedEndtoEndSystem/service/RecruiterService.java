@@ -182,8 +182,10 @@ public class RecruiterService {
             Recruiter recruiter;
             recruiter = findByEmail(email);
             if (ObjectUtils.isEmpty(recruiter)) {
+                recruiter=new Recruiter();
                 recruiter.setId(uniqueUtiliy.getNextNumber("RECRUITER", "hr"));
                 recruiter.setEmail(email);
+                recruiter.setName(name);
                 recruiter = repository.save(recruiter);
             }
             UserDTO userDTO = new UserDTO();
@@ -287,5 +289,14 @@ public class RecruiterService {
         recruiterOverview.setActiveJobs(activeJobs);
         recruiterOverview.setTotalJobs(totalJobs);
         return recruiterOverview;
+    }
+
+    public Recruiter getRecruiterById(String id) {
+        log.info("Get recruiter id :{}", id);
+        Optional<Recruiter> recruiter = repository.findById(id);
+        if(recruiter.isEmpty()){
+            return null;
+        }
+        return recruiter.get();
     }
 }

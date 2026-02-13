@@ -1,10 +1,13 @@
 package com.aibackend.AiBasedEndtoEndSystem.controller;
 
+import com.aibackend.AiBasedEndtoEndSystem.config.AuthAppConfig;
+import com.aibackend.AiBasedEndtoEndSystem.config.GoogleAuthConfig;
 import com.aibackend.AiBasedEndtoEndSystem.dto.CandidateRequest;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Candidate;
 import com.aibackend.AiBasedEndtoEndSystem.service.CandidateService;
 import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
+import com.aibackend.AiBasedEndtoEndSystem.util.SecurityUtils;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +29,8 @@ public class CandidateController {
     private JwtUtil jwtUtil;
     @Autowired
     private PublicController publicController;
+    @Autowired
+    private AuthAppConfig authAppConfig;
 
     @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public PublicController.UserResponse createNewCandidate(
@@ -78,16 +83,55 @@ public class CandidateController {
     }
 
     @GetMapping("/google/login")
-    public PublicController.UserResponse googleCallback(@RequestParam("code") String code) throws IOException {
+    public void googleCallback(@RequestParam("code") String code, HttpServletResponse response) throws IOException {
         log.info("Code :{}", code);
-        return candidateService.googleHostCallback(code);
+        PublicController.UserResponse dto = candidateService.googleHostCallback(code);
+        String token = dto.getToken().getAuthKey();
+        String id = dto.getId();
+        String redirectUrl =
+                authAppConfig.getFrontEndUrl() + "/candidate/google-success?token=" + token + "&id=" + id;
+        response.sendRedirect(redirectUrl);
 
     }
 
     @GetMapping("/google/login-url-candidate")
-    public void getGoogleLoginUrlHost(HttpServletResponse response) throws Exception {
+    public RecruiterController.GoogleAuthUrl getGoogleLoginUrlHost(HttpServletResponse response) throws Exception {
         String googleAuthUrl = candidateService.getGoogleLoginUrlHost();
-        response.sendRedirect(googleAuthUrl);
+        RecruiterController.GoogleAuthUrl url = new RecruiterController.GoogleAuthUrl();
+        url.setUrl(googleAuthUrl);
+        return url;
+    }
+
+    @PostMapping("/logout")
+    public Boolean logout(@RequestHeader("Authorization") String authHeader) {
+        try {
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                String token = authHeader.substring(7);
+                log.info("Token of logout :{}", token);
+                return jwtUtil.invalidateToken(token);
+            } else {
+                return Boolean.FALSE;
+            }
+        } catch (Exception e) {
+            log.info("Failed to logout");
+            return Boolean.FALSE;
+        }
+    }
+
+
+    @PutMapping(value = "/update", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public PublicController.UserResponse updateCandidate(@RequestHeader("Authorization") String authHeader,
+                                                         @ModelAttribute CandidateRequest request,
+                                                         @RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
+                                                         @RequestPart(value = "resume", required = false) MultipartFile resume) {
+        log.info("Update Candidate Details :{}", request);
+        String token = authHeader.substring(7);
+        String id = jwtUtil.extractUserObjectId(token);
+        UserDTO user = SecurityUtils.getLoggedInUser(token, jwtUtil.getKey());
+        UserDTO candidateDto = candidateService.udpateCandidateDetails(user, request, profileImage, resume);
+        candidateDto.setRole("Candidate");
+        JwtUtil.Token jwtToken = jwtUtil.generateClientToken(candidateDto);
+        return publicController.toUserResponse(candidateDto, jwtToken);
     }
 
 }

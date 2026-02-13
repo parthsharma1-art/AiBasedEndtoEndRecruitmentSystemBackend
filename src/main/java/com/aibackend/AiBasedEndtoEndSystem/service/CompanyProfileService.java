@@ -18,9 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -33,6 +32,7 @@ public class CompanyProfileService {
     @Autowired
     private UniqueUtiliy uniqueUtiliy;
     @Autowired
+    @Lazy
     private JobPostingService jobPostingService;
 
     public CompanyProfileResponse createCompanyProfileByRecruiter(Recruiter recruiter) {
@@ -48,7 +48,7 @@ public class CompanyProfileService {
         profile.setCreatedBy(recruiter.getId());
         profile = save(profile);
         recruiter.setCompanyId(profile.getId());
-        CompanyProfile.BasicSetting basicSetting=new CompanyProfile.BasicSetting();
+        CompanyProfile.BasicSetting basicSetting = new CompanyProfile.BasicSetting();
         basicSetting.setCompanyName(recruiter.getCompanyName());
         recruiterService.save(recruiter);
         return toResponse(profile);
@@ -136,7 +136,6 @@ public class CompanyProfileService {
             throw new BadException("Company Profile not found for the user " + user.getId());
         }
         CompanyProfile companyProfile = exist.get();
-        log.info("Company profile id :{}", companyProfile.getId());
         log.info("Request coming from frontend :{}", request);
         JobPostings jopPosting = jobPostingService.createJob(request, companyProfile);
         return new CompanyProfileController.JobPostingsResponse(jopPosting);
@@ -156,5 +155,34 @@ public class CompanyProfileService {
             responses.add(toResponse(profile));
         }
         return responses;
+    }
+
+    public CompanyProfileController.JobPostingsResponse updateJobRequest(UserDTO user, String jobId, CompanyProfileController.JobPostingsRequest request) {
+        log.info("Updating job Reqeuest for the id:{}", jobId);
+        Recruiter recruiter = recruiterService.getRecruiterById(user.getId());
+        if (ObjectUtils.isEmpty(recruiter)) {
+            log.error("Recruiter not found with the id :{}", user.getId());
+            throw new BadException("Recruiter not found " + user.getId());
+        }
+        Optional<CompanyProfile> companyProfile = repository.findById(recruiter.getCompanyId());
+        if (ObjectUtils.isEmpty(companyProfile)) {
+            log.error("Company Profile not found for the userId :{}", user.getId());
+            throw new BadException("Company Profile not found for user " + user.getId());
+        }
+        JobPostings jobPostings = jobPostingService.updateJobPosting(jobId, companyProfile.get(), recruiter, request);
+        return new CompanyProfileController.JobPostingsResponse(jobPostings);
+
+    }
+
+    public Map<String, CompanyProfile> getCompanyProfilesByIds(Set<String> companyIds) {
+        if (companyIds == null || companyIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<CompanyProfile> profiles = repository.findByIdIn(companyIds);
+        return profiles.stream()
+                .collect(Collectors.toMap(
+                        CompanyProfile::getId,
+                        profile -> profile
+                ));
     }
 }

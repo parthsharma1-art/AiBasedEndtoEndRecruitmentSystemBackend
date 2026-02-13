@@ -18,6 +18,8 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
@@ -163,12 +165,17 @@ public class CandidateService {
             Map<String, Object> userInfo = userInfoResponse.getBody();
             String email = (String) userInfo.get("email");
             String name = (String) userInfo.get("name");
+            log.info("Email is :{}", email);
+            log.info("name is :{}", name);
 
-            Candidate candidate;
-            candidate = findByEmail(email);
+            Candidate candidate = findByEmail(email);
+            log.info("Candidate :{}", candidate);
             if (ObjectUtils.isEmpty(candidate)) {
+                candidate = new Candidate();
+                candidate.setName(name);
                 candidate.setId(uniqueUtiliy.getNextNumber("CANDIDATE", "cd"));
                 candidate.setEmail(email);
+                candidate.setCreatedAt(Instant.now());
                 candidate = candidateRepository.save(candidate);
             }
             UserDTO userDTO = new UserDTO();
@@ -211,4 +218,48 @@ public class CandidateService {
         return googleAuthUrlForHost;
 
     }
+
+    public UserDTO udpateCandidateDetails(UserDTO user, CandidateRequest request, MultipartFile profileImage, MultipartFile resume) {
+        log.info("Update Candidate request for the id :{}", user);
+        validateRequest(request);
+        Candidate candidate = candidateRepository.findById(user.getId()).orElse(null);
+        if (ObjectUtils.isEmpty(candidate)) {
+            throw new BadException("Candidate not found for the id " + user.getId());
+
+        }
+        candidate.setName(request.getName());
+        candidate.setEmail(request.getEmail());
+        candidate.setMobileNumber(request.getMobileNumber());
+        candidate.setAge(request.getAge());
+        candidate.setGender(request.getGender());
+        if (request.getLocation() != null) {
+            Candidate.Location loc = new Candidate.Location();
+            loc.setCity(request.getLocation().getCity());
+            loc.setState(request.getLocation().getState());
+            loc.setCountry(request.getLocation().getCountry());
+            candidate.setLocation(loc);
+        }
+        candidate.setSkills(request.getSkills() == null ? new ArrayList<>() : new ArrayList<>(request.getSkills()));
+        candidate.setExperienceYears(request.getExperienceYears());
+        candidate.setHighestQualification(request.getHighestQualification());
+        candidate.setCurrentJobRole(request.getCurrentJobRole());
+        candidate.setCurrentCompany(null);
+        candidate.setExpectedSalary(request.getExpectedSalary());
+        candidate.setCurrentSalary(null);
+        candidate.setResumeId(request.getResumeUrl());
+        if (profileImage != null && !profileImage.isEmpty()) {
+            String profileImageId = fileStorageService.storeFile(profileImage);
+            candidate.setProfileImageId(profileImageId);
+        }
+        if (resume != null && !resume.isEmpty()) {
+            String resumeId = fileStorageService.storeFile(resume);
+            candidate.setResumeId(resumeId);
+        }
+        candidateRepository.save(candidate);
+        log.info("Saved Candidate :{}", candidate);
+        return userService.toCandidateDTO(candidate);
+
+    }
+
+
 }

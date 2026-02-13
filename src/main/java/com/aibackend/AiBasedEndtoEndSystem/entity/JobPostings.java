@@ -18,6 +18,7 @@ public class JobPostings {
     private String salaryRange;
     private JobType jobType;
     private Integer experienceRequired;
+    private  String profile;
     private String postBy;   // recruiter Id
     private String companyId;
     private Instant createdAt;
@@ -28,6 +29,6 @@ public class JobPostings {
 
 
     public enum JobType {
-        REMOTE, HYBRID, ONSITE
+        REMOTE, HYBRID, ONSITE,FULL_TIME,INTERNSHIP
     }
 }

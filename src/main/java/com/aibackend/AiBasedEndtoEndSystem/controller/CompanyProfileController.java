@@ -71,6 +71,7 @@ public class CompanyProfileController {
 
     @PostMapping("/job/post")
     public JobPostingsResponse createJob(@RequestHeader("Authorization") String authHeader, @RequestBody JobPostingsRequest request) {
+        log.info("The job posting request is :{}", request);
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             throw new BadException("Missing or invalid Authorization header");
         }
@@ -81,6 +82,7 @@ public class CompanyProfileController {
         return companyProfileService.createJobPosting(userDTO, request);
     }
 
+
     @Data
     public static class JobPostingsRequest {
         private String title;
@@ -89,6 +91,7 @@ public class CompanyProfileController {
         private String salaryRange;
         private JobPostings.JobType jobType;
         private Integer experienceRequired;
+        private String profile;
     }
 
     @Data
@@ -104,6 +107,7 @@ public class CompanyProfileController {
         private String companyId;
         private Instant createdAt;
         private boolean isActive;
+        private String profile;
 
         public JobPostingsResponse(JobPostings job) {
             this.id = job.getId();
@@ -117,6 +121,7 @@ public class CompanyProfileController {
             this.companyId = job.getCompanyId();
             this.createdAt = job.getCreatedAt();
             this.isActive = job.isActive();
+            this.profile = job.getProfile();
         }
     }
 
