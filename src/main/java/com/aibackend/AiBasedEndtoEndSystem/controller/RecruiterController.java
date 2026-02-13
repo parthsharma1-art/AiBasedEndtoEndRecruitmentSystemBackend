@@ -1,7 +1,6 @@
 package com.aibackend.AiBasedEndtoEndSystem.controller;
 
 import com.aibackend.AiBasedEndtoEndSystem.config.AuthAppConfig;
-import com.aibackend.AiBasedEndtoEndSystem.config.GoogleAuthConfig;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
 import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
@@ -49,6 +48,7 @@ public class RecruiterController {
         UserDTO userDTO = recruiterService.getUserLogin(request);
         userDTO.setRole("Recruiter");
         JwtUtil.Token token = jwtUtil.generateClientToken(userDTO);
+        log.info("user dto is here :{}",userDTO);
         return publicController.toUserResponse(userDTO, token);
     }
 
@@ -121,6 +121,20 @@ public class RecruiterController {
         return recruiterService.getRecruiterOverview(userDTO);
     }
 
+    @PutMapping(value = "/update", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public PublicController.UserResponse updateCandidate(@RequestHeader("Authorization") String authHeader,
+                                                         @ModelAttribute RecruiterRequest request,
+                                                         @RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
+                                                         @RequestPart(value = "resume", required = false) MultipartFile idCard) {
+        log.info("Update Candidate Details :{}", request);
+        String token = authHeader.substring(7);
+        UserDTO user = SecurityUtils.getLoggedInUser(token, jwtUtil.getKey());
+        UserDTO candidateDto = recruiterService.updateRecruiterDetails(request, profileImage, idCard, user);
+        candidateDto.setRole("Recruiter");
+        JwtUtil.Token jwtToken = jwtUtil.generateClientToken(candidateDto);
+        return publicController.toUserResponse(candidateDto, jwtToken);
+    }
+
     @Data
     public static class RecruiterResponse {
         private String id;
@@ -130,6 +144,10 @@ public class RecruiterController {
         private String companyId;
         private String companyName;
         private String profileImageUrl;
+        private String state;
+        private String country;
+        private Integer age;
+        private String designation;
 
     }
 

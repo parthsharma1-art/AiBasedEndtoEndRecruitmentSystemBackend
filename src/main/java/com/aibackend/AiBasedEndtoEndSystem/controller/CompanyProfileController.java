@@ -62,7 +62,6 @@ public class CompanyProfileController {
             throw new BadException("Missing or invalid Authorization header");
         }
         String token = authHeader.substring(7);
-        String id = jwtUtil.extractUserObjectId(token);
         UserDTO userDTO = SecurityUtils.getLoggedInUser(token, jwtUtil.getKey());
         log.info("Get logged in user :{}", userDTO);
         return jobPostingService.getAllJobs(userDTO);

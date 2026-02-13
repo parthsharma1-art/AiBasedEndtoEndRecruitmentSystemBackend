@@ -50,4 +50,14 @@ public class FileStorageService {
             throw new RuntimeException("File retrieval failed", e);
         }
     }
+
+    public void deleteFile(String fileId) {
+        try {
+            ObjectId objectId = new ObjectId(fileId);
+            Query query = Query.query(Criteria.where("_id").is(objectId));
+            gridFsTemplate.delete(query);
+        } catch (Exception e) {
+            throw new RuntimeException("File deletion failed", e);
+        }
+    }
 }

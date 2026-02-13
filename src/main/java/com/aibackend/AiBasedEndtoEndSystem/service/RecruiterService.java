@@ -65,6 +65,9 @@ public class RecruiterService {
         recruiter.setDesignation(request.getDesignation());
         recruiter.setEmail(request.getEmail());
         recruiter.setMobileNumber(request.getMobileNumber());
+        recruiter.setAge(request.getAge());
+        recruiter.setState(request.getState());
+        recruiter.setCountry(recruiter.getCountry());
 
         // Save profile image
         if (profileImage != null && !profileImage.isEmpty()) {
@@ -182,7 +185,7 @@ public class RecruiterService {
             Recruiter recruiter;
             recruiter = findByEmail(email);
             if (ObjectUtils.isEmpty(recruiter)) {
-                recruiter=new Recruiter();
+                recruiter = new Recruiter();
                 recruiter.setId(uniqueUtiliy.getNextNumber("RECRUITER", "hr"));
                 recruiter.setEmail(email);
                 recruiter.setName(name);
@@ -242,24 +245,26 @@ public class RecruiterService {
         response.setName(recruiter.getName());
         response.setEmail(recruiter.getEmail());
         response.setMobileNumber(recruiter.getMobileNumber());
+        response.setAge(recruiter.getAge());
+        response.setState(recruiter.getState());
+        response.setCountry(recruiter.getCountry());
         if (recruiter.getProfileImageId() != null) {
             response.setProfileImageUrl("/file/" + recruiter.getProfileImageId());
         }
-
         if (recruiter.getCompanyId() != null) {
             CompanyProfile companyProfile =
                     companyProfileService.getCompanyProfileById(recruiter.getCompanyId());
             if (companyProfile != null) {
                 response.setCompanyId(companyProfile.getId());
                 if (companyProfile.getBasicSetting() != null) {
-                    response.setCompanyName(
-                            companyProfile.getBasicSetting().getCompanyName()
-                    );
+                    response.setCompanyName(companyProfile.getBasicSetting().getCompanyName());
                 } else {
                     log.warn("BasicSetting is null for company {}", companyProfile.getId());
                 }
             }
         }
+        response.setDesignation(recruiter.getDesignation());
+        log.info("Response :{}",response);
         return response;
     }
 
@@ -294,9 +299,50 @@ public class RecruiterService {
     public Recruiter getRecruiterById(String id) {
         log.info("Get recruiter id :{}", id);
         Optional<Recruiter> recruiter = repository.findById(id);
-        if(recruiter.isEmpty()){
+        if (recruiter.isEmpty()) {
             return null;
         }
         return recruiter.get();
+    }
+
+
+    public UserDTO updateRecruiterDetails(RecruiterController.RecruiterRequest request, MultipartFile profileImage, MultipartFile idCard, UserDTO userDTO) {
+        log.info("Logged In Recruiter Id is :{}", userDTO.getId());
+        validateRequest(request);
+        Recruiter recruiter = getRecruiterById(userDTO.getId());
+        if (ObjectUtils.isEmpty(recruiter)) {
+            log.error("Recruiter not found for the id :{}", userDTO.getId());
+        }
+        recruiter.setName(request.getName());
+        recruiter.setCompanyName(request.getCompanyName());
+        recruiter.setDesignation(request.getDesignation());
+        recruiter.setEmail(request.getEmail());
+        recruiter.setMobileNumber(request.getMobileNumber());
+        recruiter.setAge(request.getAge());
+        recruiter.setState(request.getState());
+        recruiter.setCountry(request.getCountry());
+        recruiter.setDesignation(request.getDesignation());
+
+        if (!ObjectUtils.isEmpty(recruiter.getProfileImageId())) {
+            log.info("Deleting the recruiter profile image");
+            fileStorageService.deleteFile(recruiter.getProfileImageId());
+        }
+        if (!ObjectUtils.isEmpty(recruiter.getIdCardFileId())) {
+            log.info("Deleting the recruiter id card image");
+            fileStorageService.deleteFile(recruiter.getIdCardFileId());
+        }
+        if (profileImage != null && !profileImage.isEmpty()) {
+            String profileImageId = fileStorageService.storeFile(profileImage);
+            recruiter.setProfileImageId(profileImageId);
+        }
+        if (idCard != null && !idCard.isEmpty()) {
+            log.info("id card check please check");
+            String idCardId = fileStorageService.storeFile(idCard);
+            recruiter.setIdCardFileId(idCardId);
+        }
+        recruiter = save(recruiter);
+        CompanyProfileController.CompanyProfileResponse resoponse = companyProfileService.createCompanyProfileByRecruiter(recruiter);
+        log.info("Recruiter response : {}", resoponse);
+        return userService.toRecruiterDTO(recruiter);
     }
 }

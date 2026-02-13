@@ -15,9 +15,12 @@ public class Recruiter {
     private String name;
     private String email;
     private String mobileNumber;
+    private Integer age;
 
     private String companyName;
     private String companyId;
+    private String state;
+    private String country;
     private String designation;
 
     // File references
