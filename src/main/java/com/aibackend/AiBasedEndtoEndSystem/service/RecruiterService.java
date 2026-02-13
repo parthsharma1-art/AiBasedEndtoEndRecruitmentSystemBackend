@@ -264,7 +264,7 @@ public class RecruiterService {
             }
         }
         response.setDesignation(recruiter.getDesignation());
-        log.info("Response :{}",response);
+        log.info("Response :{}", response);
         return response;
     }
 
@@ -323,13 +323,17 @@ public class RecruiterService {
         recruiter.setCountry(request.getCountry());
         recruiter.setDesignation(request.getDesignation());
 
-        if (!ObjectUtils.isEmpty(recruiter.getProfileImageId())) {
-            log.info("Deleting the recruiter profile image");
-            fileStorageService.deleteFile(recruiter.getProfileImageId());
+        if (profileImage != null && !profileImage.isEmpty()) {
+            if (!ObjectUtils.isEmpty(recruiter.getProfileImageId())) {
+                log.info("Deleting the recruiter profile image");
+                fileStorageService.deleteFile(recruiter.getProfileImageId());
+            }
         }
-        if (!ObjectUtils.isEmpty(recruiter.getIdCardFileId())) {
-            log.info("Deleting the recruiter id card image");
-            fileStorageService.deleteFile(recruiter.getIdCardFileId());
+        if (idCard != null && !idCard.isEmpty()) {
+            if (!ObjectUtils.isEmpty(recruiter.getIdCardFileId())) {
+                log.info("Deleting the recruiter id card image");
+                fileStorageService.deleteFile(recruiter.getIdCardFileId());
+            }
         }
         if (profileImage != null && !profileImage.isEmpty()) {
             String profileImageId = fileStorageService.storeFile(profileImage);
