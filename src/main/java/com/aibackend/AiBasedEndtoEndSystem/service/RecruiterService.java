@@ -1,22 +1,16 @@
 package com.aibackend.AiBasedEndtoEndSystem.service;
 
-import com.aibackend.AiBasedEndtoEndSystem.config.GoogleAuthConfig;
-import com.aibackend.AiBasedEndtoEndSystem.controller.CompanyProfileController;
-import com.aibackend.AiBasedEndtoEndSystem.controller.PublicController;
-import com.aibackend.AiBasedEndtoEndSystem.controller.RecruiterController;
-import com.aibackend.AiBasedEndtoEndSystem.controller.RecruiterController.RecruiterOverview;
-import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
-import com.aibackend.AiBasedEndtoEndSystem.entity.CompanyProfile;
-import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
-import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
-import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
-import com.aibackend.AiBasedEndtoEndSystem.exception.HrException;
-import com.aibackend.AiBasedEndtoEndSystem.repository.RecruiterRepository;
-import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
-import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtiliy;
-import lombok.extern.slf4j.Slf4j;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -24,9 +18,25 @@ import org.springframework.util.ObjectUtils;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import com.aibackend.AiBasedEndtoEndSystem.config.GoogleAuthConfig;
+import com.aibackend.AiBasedEndtoEndSystem.controller.CandidateController.CandidateResponse;
+import com.aibackend.AiBasedEndtoEndSystem.controller.CompanyProfileController;
+import com.aibackend.AiBasedEndtoEndSystem.controller.PublicController;
+import com.aibackend.AiBasedEndtoEndSystem.controller.RecruiterController;
+import com.aibackend.AiBasedEndtoEndSystem.controller.RecruiterController.CandidateDetails;
+import com.aibackend.AiBasedEndtoEndSystem.controller.RecruiterController.RecruiterOverview;
+import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
+import com.aibackend.AiBasedEndtoEndSystem.entity.Candidate;
+import com.aibackend.AiBasedEndtoEndSystem.entity.CompanyProfile;
+import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
+import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
+import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
+import com.aibackend.AiBasedEndtoEndSystem.exception.HrException;
+import com.aibackend.AiBasedEndtoEndSystem.repository.RecruiterRepository;
+import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
+import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtility;
+
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
@@ -36,7 +46,7 @@ public class RecruiterService {
     @Autowired
     private UserService userService;
     @Autowired
-    private UniqueUtiliy uniqueUtiliy;
+    private UniqueUtility uniqueUtility;
     @Autowired
     private RestTemplate restTemplate;
     @Autowired
@@ -51,15 +61,18 @@ public class RecruiterService {
     private JobPostingService jobPostingService;
     @Autowired
     private FileStorageService fileStorageService;
+    @Autowired
+    private CandidateService candidateService;
 
-    public UserDTO createNewRecruiter(RecruiterController.RecruiterRequest request, MultipartFile profileImage, MultipartFile idCard) {
+    public UserDTO createNewRecruiter(RecruiterController.RecruiterRequest request, MultipartFile profileImage,
+            MultipartFile idCard) {
         Recruiter recruiter = new Recruiter();
         validateRequest(request);
         Optional<Recruiter> existing = repository.findByMobileNumber(request.getMobileNumber());
         if (existing.isPresent()) {
             return userService.toRecruiterDTO(existing.get());
         }
-        recruiter.setId(uniqueUtiliy.getNextNumber("RECRUITER", "hr"));
+        recruiter.setId(uniqueUtility.getNextNumber("RECRUITER", "hr"));
         recruiter.setName(request.getName());
         recruiter.setCompanyName(request.getCompanyName());
         recruiter.setDesignation(request.getDesignation());
@@ -82,7 +95,8 @@ public class RecruiterService {
         }
 
         recruiter = save(recruiter);
-        CompanyProfileController.CompanyProfileResponse resoponse = companyProfileService.createCompanyProfileByRecruiter(recruiter);
+        CompanyProfileController.CompanyProfileResponse resoponse = companyProfileService
+                .createCompanyProfileByRecruiter(recruiter);
         log.info("Company profile response : {}", resoponse);
         return userService.toRecruiterDTO(recruiter);
     }
@@ -186,7 +200,7 @@ public class RecruiterService {
             recruiter = findByEmail(email);
             if (ObjectUtils.isEmpty(recruiter)) {
                 recruiter = new Recruiter();
-                recruiter.setId(uniqueUtiliy.getNextNumber("RECRUITER", "hr"));
+                recruiter.setId(uniqueUtility.getNextNumber("RECRUITER", "hr"));
                 recruiter.setEmail(email);
                 recruiter.setName(name);
                 recruiter = repository.save(recruiter);
@@ -238,9 +252,11 @@ public class RecruiterService {
 
         Recruiter recruiter = repository.findById(user.getId())
                 .orElseThrow(() -> new BadException("Recruiter not found"));
-
-        RecruiterController.RecruiterResponse response =
-                new RecruiterController.RecruiterResponse();
+        if (!ObjectUtils.isEmpty(recruiter) && !recruiter.getId().equals(user.getId())) {
+            log.error("Unauthorized Access to the Recruiter :{}", user.getId());
+            throw new BadException("Unauthorized Access to the Recruiter " + user.getId());
+        }
+        RecruiterController.RecruiterResponse response = new RecruiterController.RecruiterResponse();
         response.setId(recruiter.getId());
         response.setName(recruiter.getName());
         response.setEmail(recruiter.getEmail());
@@ -252,8 +268,7 @@ public class RecruiterService {
             response.setProfileImageUrl("/file/" + recruiter.getProfileImageId());
         }
         if (recruiter.getCompanyId() != null) {
-            CompanyProfile companyProfile =
-                    companyProfileService.getCompanyProfileById(recruiter.getCompanyId());
+            CompanyProfile companyProfile = companyProfileService.getCompanyProfileById(recruiter.getCompanyId());
             if (companyProfile != null) {
                 response.setCompanyId(companyProfile.getId());
                 if (companyProfile.getBasicSetting() != null) {
@@ -268,13 +283,16 @@ public class RecruiterService {
         return response;
     }
 
-
     public RecruiterOverview getRecruiterOverview(UserDTO user) {
         log.info("Get overview page details for the user :{}", user);
         Recruiter recruiter = findById(user.getId());
         if (ObjectUtils.isEmpty(recruiter)) {
             log.info("No recruiter found");
             throw new BadException("Recruiter not found with this id " + user.getId());
+        }
+        if (!ObjectUtils.isEmpty(recruiter) && !recruiter.getId().equals(user.getId())) {
+            log.error("Unauthorize access to the Recruiter Dashboard:{}", user);
+            throw new BadException("Unauthorize access to the Recruiter Dashboard ");
         }
         CompanyProfile companyProfile = companyProfileService.getCompanyProfileByRecruiterId(recruiter.getId());
         if (ObjectUtils.isEmpty(companyProfile)) {
@@ -305,13 +323,18 @@ public class RecruiterService {
         return recruiter.get();
     }
 
-
-    public UserDTO updateRecruiterDetails(RecruiterController.RecruiterRequest request, MultipartFile profileImage, MultipartFile idCard, UserDTO userDTO) {
+    public UserDTO updateRecruiterDetails(RecruiterController.RecruiterRequest request, MultipartFile profileImage,
+            MultipartFile idCard, UserDTO userDTO) {
         log.info("Logged In Recruiter Id is :{}", userDTO.getId());
         validateRequest(request);
         Recruiter recruiter = getRecruiterById(userDTO.getId());
         if (ObjectUtils.isEmpty(recruiter)) {
             log.error("Recruiter not found for the id :{}", userDTO.getId());
+            throw new BadException("Recruiter not found for the id " + userDTO.getId());
+        }
+        if (!ObjectUtils.isEmpty(recruiter) && !recruiter.getId().equals(userDTO.getId())) {
+            log.error("Unauthorize access to the user :{}", userDTO.getId());
+            throw new BadException("Unauthorize access to the user " + userDTO.getId());
         }
         recruiter.setName(request.getName());
         recruiter.setCompanyName(request.getCompanyName());
@@ -345,8 +368,54 @@ public class RecruiterService {
             recruiter.setIdCardFileId(idCardId);
         }
         recruiter = save(recruiter);
-        CompanyProfileController.CompanyProfileResponse resoponse = companyProfileService.createCompanyProfileByRecruiter(recruiter);
+        CompanyProfileController.CompanyProfileResponse resoponse = companyProfileService
+                .createCompanyProfileByRecruiter(recruiter);
         log.info("Recruiter response : {}", resoponse);
         return userService.toRecruiterDTO(recruiter);
     }
+
+    public List<CandidateResponse> getAllCandidate(UserDTO user) {
+        log.info("Get details for the user :{}", user);
+        List<CandidateResponse> responses = new ArrayList<>();
+        List<Candidate> candidates = candidateService.getAllCandidate();
+        if (candidates.isEmpty()) {
+            log.info("No candidate found :{}", candidates);
+            return null;
+        }
+        for (Candidate candidate : candidates) {
+            CandidateResponse response = new CandidateResponse();
+            response.setEmail(candidate.getEmail());
+            response.setId(candidate.getId());
+            response.setMobileNumber(candidate.getMobileNumber());
+            response.setName(candidate.getName());
+            response.setProfileImageId(candidate.getProfileImageId());
+            response.setResumeId(candidate.getResumeId());
+            responses.add(response);
+        }
+        return responses;
+    }
+
+    public CandidateDetails getCandidateDetailsById(UserDTO user, String id) {
+        log.info("Get details for the user :{}", user);
+        Candidate candidate = candidateService.getCandidateById(id);
+        if (ObjectUtils.isEmpty(candidate)) {
+            log.info("Candidate not found for the id :{}", id);
+            throw new BadException("Candidate not found for the id " + id);
+        }
+        CandidateDetails details = new CandidateDetails();
+        details.setId(candidate.getId());
+        details.setName(candidate.getName());
+        details.setEmail(candidate.getEmail());
+        details.setMobileNumber(candidate.getMobileNumber());
+        details.setAge(candidate.getAge());
+        details.setGender(candidate.getGender());
+        details.setSkills(candidate.getSkills());
+        details.setHighestQualification(candidate.getHighestQualification());
+        details.setProfileImageId(candidate.getProfileImageId());
+        details.setResumeId(candidate.getResumeId());
+        details.setLocation(candidate.getLocation().getCity() + ", " + candidate.getLocation().getState() + ", "
+                + candidate.getLocation().getCountry());
+        return details;
+    }
+
 }

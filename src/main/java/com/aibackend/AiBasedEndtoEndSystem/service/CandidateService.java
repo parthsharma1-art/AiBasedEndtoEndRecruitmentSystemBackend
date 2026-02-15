@@ -1,5 +1,26 @@
 package com.aibackend.AiBasedEndtoEndSystem.service;
 
+import static org.springframework.http.HttpStatus.OK;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.util.ObjectUtils;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
+
 import com.aibackend.AiBasedEndtoEndSystem.config.GoogleAuthConfig;
 import com.aibackend.AiBasedEndtoEndSystem.controller.PublicController;
 import com.aibackend.AiBasedEndtoEndSystem.dto.CandidateRequest;
@@ -8,21 +29,9 @@ import com.aibackend.AiBasedEndtoEndSystem.entity.Candidate;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
 import com.aibackend.AiBasedEndtoEndSystem.repository.CandidateRepository;
 import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
-import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtiliy;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.*;
-import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.util.ObjectUtils;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.multipart.MultipartFile;
+import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtility;
 
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
@@ -32,7 +41,7 @@ public class CandidateService {
     @Autowired
     private UserService userService;
     @Autowired
-    private UniqueUtiliy uniqueUtiliy;
+    private UniqueUtility uniqueUtiliy;
     @Autowired
     private GoogleAuthConfig googleAuthConfig;
     @Autowired
@@ -89,16 +98,25 @@ public class CandidateService {
 
     private void validateRequest(CandidateRequest request) {
 
-        if (ObjectUtils.isEmpty(request.getName())) throw new BadException("Name is required");
-        if (ObjectUtils.isEmpty(request.getEmail())) throw new BadException("Email is required");
-        if (ObjectUtils.isEmpty(request.getMobileNumber())) throw new BadException("Mobile number is required");
-        if (request.getAge() == null || request.getAge() <= 0) throw new BadException("Valid age is required");
-        if (ObjectUtils.isEmpty(request.getGender())) throw new BadException("Gender is required");
-        if (request.getLocation() == null) throw new BadException("Location details are required");
+        if (ObjectUtils.isEmpty(request.getName()))
+            throw new BadException("Name is required");
+        if (ObjectUtils.isEmpty(request.getEmail()))
+            throw new BadException("Email is required");
+        if (ObjectUtils.isEmpty(request.getMobileNumber()))
+            throw new BadException("Mobile number is required");
+        if (request.getAge() == null || request.getAge() <= 0)
+            throw new BadException("Valid age is required");
+        if (ObjectUtils.isEmpty(request.getGender()))
+            throw new BadException("Gender is required");
+        if (request.getLocation() == null)
+            throw new BadException("Location details are required");
 
-        if (ObjectUtils.isEmpty(request.getLocation().getCity())) throw new BadException("City is required");
-        if (ObjectUtils.isEmpty(request.getLocation().getState())) throw new BadException("State is required");
-        if (ObjectUtils.isEmpty(request.getLocation().getCity())) throw new BadException("Country is required");
+        if (ObjectUtils.isEmpty(request.getLocation().getCity()))
+            throw new BadException("City is required");
+        if (ObjectUtils.isEmpty(request.getLocation().getState()))
+            throw new BadException("State is required");
+        if (ObjectUtils.isEmpty(request.getLocation().getCity()))
+            throw new BadException("Country is required");
 
         if (request.getSkills() == null || request.getSkills().isEmpty())
             throw new BadException("At least one skill is required");
@@ -108,7 +126,6 @@ public class CandidateService {
 
         if (ObjectUtils.isEmpty(request.getHighestQualification()))
             throw new BadException("Highest qualification is required");
-
 
     }
 
@@ -125,7 +142,6 @@ public class CandidateService {
         }
         throw new BadException("No Candidate found with this " + request.getMobileNumber());
     }
-
 
     public Candidate findById(String id) {
         log.info("Get Candidate By id : {}", id);
@@ -219,13 +235,17 @@ public class CandidateService {
 
     }
 
-    public UserDTO udpateCandidateDetails(UserDTO user, CandidateRequest request, MultipartFile profileImage, MultipartFile resume) {
+    public UserDTO updateCandidateDetails(UserDTO user, CandidateRequest request, MultipartFile profileImage,
+            MultipartFile resume) {
         log.info("Update Candidate request for the id :{}", user);
         validateRequest(request);
         Candidate candidate = candidateRepository.findById(user.getId()).orElse(null);
         if (ObjectUtils.isEmpty(candidate)) {
             throw new BadException("Candidate not found for the id " + user.getId());
-
+        }
+        if (!ObjectUtils.isEmpty(candidate) && candidate.getId().equals(user.getId())) {
+            log.error("Unauthorize access to the candidate :{}", candidate.getId());
+            throw new BadException("Unauthorize access to the candidate " + user.getId());
         }
         candidate.setName(request.getName());
         candidate.setEmail(request.getEmail());
@@ -261,5 +281,13 @@ public class CandidateService {
 
     }
 
+    public List<Candidate> getAllCandidate() {
+        log.info("Get all candidates");
+        return candidateRepository.findAll();
+    }
 
+    public Candidate getCandidateById(String id) {
+        log.info("Get all candidates");
+        return candidateRepository.findById(id).orElse(null);
+    }
 }
