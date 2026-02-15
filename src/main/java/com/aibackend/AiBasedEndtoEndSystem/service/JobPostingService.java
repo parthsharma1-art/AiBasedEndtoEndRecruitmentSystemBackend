@@ -8,7 +8,7 @@ import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
 import com.aibackend.AiBasedEndtoEndSystem.repository.JobPostingRepository;
-import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtiliy;
+import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtility;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
@@ -24,15 +24,17 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class JobPostingService {
 
-    private final UniqueUtiliy uniqueUtiliy;
+    private final UniqueUtility uniqueUtiliy;
     private final JobPostingRepository repository;
 
     @Lazy
     private final CompanyProfileService companyProfileService;
 
-    /* --------------------------------------------------
-       CREATE JOB
-    -------------------------------------------------- */
+    /*
+     * --------------------------------------------------
+     * CREATE JOB
+     * --------------------------------------------------
+     */
     public JobPostings createJob(
             CompanyProfileController.JobPostingsRequest request,
             CompanyProfile companyProfile) {
@@ -67,8 +69,7 @@ public class JobPostingService {
     }
 
     public List<JobPostings> getAllJobPostings(Recruiter recruiter) {
-        CompanyProfile profile =
-                companyProfileService.getCompanyProfileByRecruiterId(recruiter.getId());
+        CompanyProfile profile = companyProfileService.getCompanyProfileByRecruiterId(recruiter.getId());
         if (ObjectUtils.isEmpty(profile)) {
             return Collections.emptyList();
         }
@@ -81,6 +82,10 @@ public class JobPostingService {
         if (ObjectUtils.isEmpty(profile)) {
             return Collections.emptyList();
         }
+        if (!profile.getRecruiterId().equals(user.getId())) {
+            log.error("Unauthorize access to the Company profile :{}", profile.getId());
+            throw new BadException("Unauthorize access to the Company profile " + user.getId());
+        }
         return repository.findByCompanyId(profile.getId())
                 .stream()
                 .peek(job -> log.info("Job profile value: {}", job.getProfile()))
@@ -91,8 +96,7 @@ public class JobPostingService {
 
     public List<PublicJobResponse> getAllJobs() {
         log.info("Fetching all public active jobs");
-        List<JobPostings> jobs =
-                repository.findByIsActiveTrue(Boolean.TRUE);
+        List<JobPostings> jobs = repository.findByIsActiveTrue(Boolean.TRUE);
         if (jobs.isEmpty()) {
             return Collections.emptyList();
         }
@@ -102,8 +106,7 @@ public class JobPostingService {
                 .map(JobPostings::getCompanyId)
                 .collect(Collectors.toSet());
         log.info("list of company ids :{}", companyIds);
-        Map<String, CompanyProfile> companyMap =
-                companyProfileService.getCompanyProfilesByIds(companyIds);
+        Map<String, CompanyProfile> companyMap = companyProfileService.getCompanyProfilesByIds(companyIds);
         log.info("company map is here :{}", companyMap);
         List<PublicJobResponse> responses = new ArrayList<>();
         for (JobPostings job : jobs) {
@@ -125,22 +128,20 @@ public class JobPostingService {
         response.setRecruiterId(profile.getRecruiterId());
         response.setCompanyId(profile.getId());
         response.setCompanyName(
-                profile.getBasicSetting().getCompanyName()
-        );
+                profile.getBasicSetting().getCompanyName());
         response.setCompanyDomain(
-                profile.getBasicSetting().getCompanyDomain()
-        );
+                profile.getBasicSetting().getCompanyDomain());
         response.setJobPostingsResponse(
-                new CompanyProfileController.JobPostingsResponse(job)
-        );
+                new CompanyProfileController.JobPostingsResponse(job));
         return response;
     }
 
-    /* --------------------------------------------------
-       JOBS BY COMPANY
-    -------------------------------------------------- */
-    public List<CompanyProfileController.JobPostingsResponse>
-    allJobsByCompanyId(String companyId) {
+    /*
+     * --------------------------------------------------
+     * JOBS BY COMPANY
+     * --------------------------------------------------
+     */
+    public List<CompanyProfileController.JobPostingsResponse> allJobsByCompanyId(String companyId) {
 
         log.info("Fetching jobs for company: {}", companyId);
 
@@ -150,22 +151,21 @@ public class JobPostingService {
                 .collect(Collectors.toList());
     }
 
-    /* --------------------------------------------------
-       UPDATE JOB
-    -------------------------------------------------- */
+    /*
+     * --------------------------------------------------
+     * UPDATE JOB
+     * --------------------------------------------------
+     */
     public JobPostings updateJobPosting(
             String id,
             CompanyProfile companyProfile,
             Recruiter recruiter,
-            CompanyProfileController.JobPostingsRequest request
-    ) {
+            CompanyProfileController.JobPostingsRequest request) {
 
         log.info("Updating job id: {}", id);
 
         JobPostings job = repository.findById(id)
-                .orElseThrow(() ->
-                        new BadException("Job Posting not found: " + id)
-                );
+                .orElseThrow(() -> new BadException("Job Posting not found: " + id));
 
         applyRequestToJob(job, request);
 
@@ -188,7 +188,6 @@ public class JobPostingService {
         repository.delete(jobPostings);
         return true;
     }
-
 
     public CompanyProfileController.JobPostingsResponse getJobDetailsById(UserDTO user, String id) {
         log.info("Get job details for the id :{}", id);

@@ -1,22 +1,34 @@
 package com.aibackend.AiBasedEndtoEndSystem.controller;
 
+import static org.springframework.http.HttpStatus.UNAUTHORIZED;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
+
 import com.aibackend.AiBasedEndtoEndSystem.config.AuthAppConfig;
-import com.aibackend.AiBasedEndtoEndSystem.config.GoogleAuthConfig;
 import com.aibackend.AiBasedEndtoEndSystem.dto.CandidateRequest;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Candidate;
+import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
 import com.aibackend.AiBasedEndtoEndSystem.service.CandidateService;
 import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
 import com.aibackend.AiBasedEndtoEndSystem.util.SecurityUtils;
+
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
 
 @RestController
 @RequestMapping("/candidate")
@@ -44,7 +56,6 @@ public class CandidateController {
         return publicController.toUserResponse(candidateDto, token);
     }
 
-
     @PostMapping("/login")
     public PublicController.UserResponse login(@RequestBody PublicController.LoginRequest request) throws Exception {
         UserDTO user = candidateService.getCandidateByMobileNumber(request);
@@ -55,10 +66,11 @@ public class CandidateController {
     }
 
     @GetMapping("/get")
-    public CandidateResponse getUser(@RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring(7);
-        String id = jwtUtil.extractUserObjectId(token);
-        return toCandidateRespone(candidateService.findById(id));
+    public CandidateResponse getUser() {
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null)
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        return toCandidateRespone(candidateService.findById(user.getId()));
     }
 
     public CandidateResponse toCandidateRespone(Candidate candidate) {
@@ -83,23 +95,33 @@ public class CandidateController {
     }
 
     @GetMapping("/google/login")
-    public void googleCallback(@RequestParam("code") String code, HttpServletResponse response) throws IOException {
+    public void googleCallback(@RequestParam("code") String code, HttpServletResponse response) {
         log.info("Code :{}", code);
-        PublicController.UserResponse dto = candidateService.googleHostCallback(code);
-        String token = dto.getToken().getAuthKey();
-        String id = dto.getId();
-        String redirectUrl =
-                authAppConfig.getFrontEndUrl() + "/candidate/google-success?token=" + token + "&id=" + id;
-        response.sendRedirect(redirectUrl);
+        try {
+            PublicController.UserResponse dto = candidateService.googleHostCallback(code);
+            String token = dto.getToken().getAuthKey();
+            String id = dto.getId();
+            String redirectUrl = authAppConfig.getFrontEndUrl() + "/candidate/google-success?token=" + token + "&id="
+                    + id;
+            response.sendRedirect(redirectUrl);
+        } catch (Exception e) {
+            log.error("Failed to create candidate via google login :{}", e.getMessage());
+            throw new BadException("Failed to create Candidate via google login");
+        }
 
     }
 
     @GetMapping("/google/login-url-candidate")
-    public RecruiterController.GoogleAuthUrl getGoogleLoginUrlHost(HttpServletResponse response) throws Exception {
-        String googleAuthUrl = candidateService.getGoogleLoginUrlHost();
-        RecruiterController.GoogleAuthUrl url = new RecruiterController.GoogleAuthUrl();
-        url.setUrl(googleAuthUrl);
-        return url;
+    public RecruiterController.GoogleAuthUrl getGoogleLoginUrlHost(HttpServletResponse response) {
+        try {
+            String googleAuthUrl = candidateService.getGoogleLoginUrlHost();
+            RecruiterController.GoogleAuthUrl url = new RecruiterController.GoogleAuthUrl();
+            url.setUrl(googleAuthUrl);
+            return url;
+        } catch (Exception e) {
+            log.error("Failed to create candidate google login url :{}", e.getMessage());
+            throw new BadException("Failed to create candidate google login url");
+        }
     }
 
     @PostMapping("/logout")
@@ -109,26 +131,23 @@ public class CandidateController {
                 String token = authHeader.substring(7);
                 log.info("Token of logout :{}", token);
                 return jwtUtil.invalidateToken(token);
-            } else {
-                return Boolean.FALSE;
             }
+            return Boolean.FALSE;
         } catch (Exception e) {
             log.info("Failed to logout");
             return Boolean.FALSE;
         }
     }
 
-
     @PutMapping(value = "/update", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public PublicController.UserResponse updateCandidate(@RequestHeader("Authorization") String authHeader,
-                                                         @ModelAttribute CandidateRequest request,
-                                                         @RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
-                                                         @RequestPart(value = "resume", required = false) MultipartFile resume) {
+    public PublicController.UserResponse updateCandidate(@ModelAttribute CandidateRequest request,
+            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
+            @RequestPart(value = "resume", required = false) MultipartFile resume) {
         log.info("Update Candidate Details :{}", request);
-        String token = authHeader.substring(7);
-        String id = jwtUtil.extractUserObjectId(token);
-        UserDTO user = SecurityUtils.getLoggedInUser(token, jwtUtil.getKey());
-        UserDTO candidateDto = candidateService.udpateCandidateDetails(user, request, profileImage, resume);
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null)
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        UserDTO candidateDto = candidateService.updateCandidateDetails(user, request, profileImage, resume);
         candidateDto.setRole("Candidate");
         JwtUtil.Token jwtToken = jwtUtil.generateClientToken(candidateDto);
         return publicController.toUserResponse(candidateDto, jwtToken);

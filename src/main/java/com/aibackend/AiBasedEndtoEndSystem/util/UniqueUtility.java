@@ -14,7 +14,7 @@ import org.springframework.util.ObjectUtils;
 import java.text.MessageFormat;
 
 @Component
-public class UniqueUtiliy {
+public class UniqueUtility {
 
     @Autowired
     private MongoTemplate mongoTemplate;

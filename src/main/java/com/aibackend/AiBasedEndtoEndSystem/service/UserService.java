@@ -7,7 +7,7 @@ import com.aibackend.AiBasedEndtoEndSystem.exception.UserNotFoundException;
 import com.aibackend.AiBasedEndtoEndSystem.controller.PublicController;
 import com.aibackend.AiBasedEndtoEndSystem.entity.User;
 import com.aibackend.AiBasedEndtoEndSystem.repository.UserRepository;
-import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtiliy;
+import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtility;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,7 +22,7 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
     @Autowired
-    private UniqueUtiliy uniqueUtiliy;
+    private UniqueUtility uniqueUtiliy;
 
     public UserDTO createUser(PublicController.UserRequest request) {
         log.info("New User data :{}", request);

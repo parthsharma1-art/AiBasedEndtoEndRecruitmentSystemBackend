@@ -9,7 +9,7 @@ import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
 import com.aibackend.AiBasedEndtoEndSystem.repository.CompanyProfileRepository;
-import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtiliy;
+import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtility;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -30,7 +30,7 @@ public class CompanyProfileService {
     @Lazy
     private RecruiterService recruiterService;
     @Autowired
-    private UniqueUtiliy uniqueUtiliy;
+    private UniqueUtility uniqueUtility;
     @Autowired
     @Lazy
     private JobPostingService jobPostingService;
@@ -42,7 +42,7 @@ public class CompanyProfileService {
             return null;
         }
         CompanyProfile profile = new CompanyProfile();
-        profile.setId(uniqueUtiliy.getNextNumber("COMPANY_PROFILE", "companyProfile"));
+        profile.setId(uniqueUtility.getNextNumber("COMPANY_PROFILE", "companyProfile"));
         profile.setRecruiterId(recruiter.getId());
         profile.setCreatedAt(Instant.now());
         profile.setCreatedBy(recruiter.getId());
@@ -62,6 +62,10 @@ public class CompanyProfileService {
             throw new RuntimeException("No company profile found for the user " + user.getId());
         }
         CompanyProfile companyProfile = existCompanyProfile.get();
+        if (!companyProfile.getRecruiterId().equals(user.getId())) {
+            log.error("Unauthorize access to the Company profile :{}", companyProfile.getId());
+            throw new BadException("Unauthorize access to the Company profile " + user.getId());
+        }
         boolean hasChanges = false;
         if (!ObjectUtils.isEmpty(request.getBasicSetting())) {
             companyProfile.setBasicSetting(request.getBasicSetting());
@@ -106,6 +110,10 @@ public class CompanyProfileService {
             return null;
         }
         CompanyProfile companyProfile = existCompanyProfile.get();
+        if (!companyProfile.getRecruiterId().equals(user.getId())) {
+            log.error("Unauthorize access to the Company profile :{}", companyProfile.getId());
+            throw new BadException("Unauthorize access to the Company profile " + user.getId());
+        }
         return toResponse(companyProfile);
     }
 
@@ -116,7 +124,8 @@ public class CompanyProfileService {
             log.info("No Company profile found for this domain :{}", domain);
             return null;
         }
-        List<CompanyProfileController.JobPostingsResponse> jobPostings = jobPostingService.allJobsByCompanyId(exist.get().getId());
+        List<CompanyProfileController.JobPostingsResponse> jobPostings = jobPostingService
+                .allJobsByCompanyId(exist.get().getId());
 
         CompanyProfileResponse response = toResponse(exist.get());
         response.setJobPostingsResponses(jobPostings);
@@ -129,13 +138,18 @@ public class CompanyProfileService {
         return companyProfile.orElse(null);
     }
 
-    public CompanyProfileController.JobPostingsResponse createJobPosting(UserDTO user, CompanyProfileController.JobPostingsRequest request) {
+    public CompanyProfileController.JobPostingsResponse createJobPosting(UserDTO user,
+            CompanyProfileController.JobPostingsRequest request) {
         log.info("Creating job for the recruiter :{}", user);
         Optional<CompanyProfile> exist = repository.getCompanyProfileByRecruiterId(user.getId());
         if (exist.isEmpty()) {
             throw new BadException("Company Profile not found for the user " + user.getId());
         }
         CompanyProfile companyProfile = exist.get();
+        if (!companyProfile.getRecruiterId().equals(user.getId())) {
+            log.error("Unauthorize access to the Company profile :{}", companyProfile.getId());
+            throw new BadException("Unauthorize access to the Company profile " + user.getId());
+        }
         log.info("Request coming from frontend :{}", request);
         JobPostings jopPosting = jobPostingService.createJob(request, companyProfile);
         return new CompanyProfileController.JobPostingsResponse(jopPosting);
@@ -157,7 +171,8 @@ public class CompanyProfileService {
         return responses;
     }
 
-    public CompanyProfileController.JobPostingsResponse updateJobRequest(UserDTO user, String jobId, CompanyProfileController.JobPostingsRequest request) {
+    public CompanyProfileController.JobPostingsResponse updateJobRequest(UserDTO user, String jobId,
+            CompanyProfileController.JobPostingsRequest request) {
         log.info("Updating job Reqeuest for the id:{}", jobId);
         Recruiter recruiter = recruiterService.getRecruiterById(user.getId());
         if (ObjectUtils.isEmpty(recruiter)) {
@@ -182,7 +197,6 @@ public class CompanyProfileService {
         return profiles.stream()
                 .collect(Collectors.toMap(
                         CompanyProfile::getId,
-                        profile -> profile
-                ));
+                        profile -> profile));
     }
 }

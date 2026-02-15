@@ -1,20 +1,37 @@
 package com.aibackend.AiBasedEndtoEndSystem.controller;
 
+import static org.springframework.http.HttpStatus.UNAUTHORIZED;
+
+import java.io.IOException;
+import java.time.Instant;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
+
 import com.aibackend.AiBasedEndtoEndSystem.config.AuthAppConfig;
+import com.aibackend.AiBasedEndtoEndSystem.controller.CandidateController.CandidateResponse;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
-import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
+import com.aibackend.AiBasedEndtoEndSystem.service.RecruiterService;
 import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
 import com.aibackend.AiBasedEndtoEndSystem.util.SecurityUtils;
-import com.aibackend.AiBasedEndtoEndSystem.service.RecruiterService;
+
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
 
 @RestController
 @RequestMapping("/recruiter")
@@ -41,25 +58,43 @@ public class RecruiterController {
         return publicController.toUserResponse(userDTO, token);
     }
 
-
     @PostMapping("/login")
-    public PublicController.UserResponse createNewHR(@RequestBody PublicController.LoginRequest request) throws Exception {
+    public PublicController.UserResponse createNewHR(@RequestBody PublicController.LoginRequest request)
+            throws Exception {
         log.info("Recruiter login request :{}", request);
         UserDTO userDTO = recruiterService.getUserLogin(request);
         userDTO.setRole("Recruiter");
         JwtUtil.Token token = jwtUtil.generateClientToken(userDTO);
-        log.info("user dto is here :{}",userDTO);
+        log.info("user dto is here :{}", userDTO);
         return publicController.toUserResponse(userDTO, token);
     }
 
     @GetMapping("/get")
-    public RecruiterResponse getUser(@RequestHeader("Authorization") String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new BadException("Missing or invalid Authorization header");
+    public RecruiterResponse getUser() {
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null)
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        return recruiterService.getRecruiterDetails(user);
+    }
+
+    @GetMapping("/candidate/get-all")
+    public List<CandidateResponse> getAllCandidate() {
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null) {
+            log.error("user not found for the ID ", user);
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
         }
-        String token = authHeader.substring(7);
-        UserDTO userDTO = SecurityUtils.getLoggedInUser(token, jwtUtil.getKey());
-        return recruiterService.getRecruiterDetails(userDTO);
+        return recruiterService.getAllCandidate(user);
+    }
+
+    @GetMapping("/candidate/{id}")
+    public CandidateDetails getCandidateDetailsById(@PathVariable String id) {
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null) {
+            log.error("user not found for the ID ", user);
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        }
+        return recruiterService.getCandidateDetailsById(user,id);
     }
 
     @GetMapping("/google/login")
@@ -68,8 +103,7 @@ public class RecruiterController {
         PublicController.UserResponse dto = recruiterService.googleHostCallback(code);
         String token = dto.getToken().getAuthKey();
         String id = dto.getId();
-        String redirectUrl =
-                authAppConfig.getFrontEndUrl() + "/google-success?token=" + token + "&id=" + id;
+        String redirectUrl = authAppConfig.getFrontEndUrl() + "/google-success?token=" + token + "&id=" + id;
         response.sendRedirect(redirectUrl);
 
     }
@@ -111,28 +145,26 @@ public class RecruiterController {
     }
 
     @GetMapping("/overview")
-    public RecruiterOverview getOverviewPage(@RequestHeader("Authorization") String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new BadException("Missing or invalid Authorization header");
-        }
-        String token = authHeader.substring(7);
-        String id = jwtUtil.extractUserObjectId(token);
-        UserDTO userDTO = SecurityUtils.getLoggedInUser(token, jwtUtil.getKey());
-        return recruiterService.getRecruiterOverview(userDTO);
+    public RecruiterOverview getOverviewPage() {
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null)
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        return recruiterService.getRecruiterOverview(user);
     }
 
     @PutMapping(value = "/update", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public PublicController.UserResponse updateCandidate(@RequestHeader("Authorization") String authHeader,
-                                                         @ModelAttribute RecruiterRequest request,
-                                                         @RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
-                                                         @RequestPart(value = "resume", required = false) MultipartFile idCard) {
+            @ModelAttribute RecruiterRequest request,
+            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
+            @RequestPart(value = "resume", required = false) MultipartFile idCard) {
         log.info("Update Candidate Details :{}", request);
-        String token = authHeader.substring(7);
-        UserDTO user = SecurityUtils.getLoggedInUser(token, jwtUtil.getKey());
-        UserDTO candidateDto = recruiterService.updateRecruiterDetails(request, profileImage, idCard, user);
-        candidateDto.setRole("Recruiter");
-        JwtUtil.Token jwtToken = jwtUtil.generateClientToken(candidateDto);
-        return publicController.toUserResponse(candidateDto, jwtToken);
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null)
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        UserDTO recruiterDTO = recruiterService.updateRecruiterDetails(request, profileImage, idCard, user);
+        recruiterDTO.setRole("Recruiter");
+        JwtUtil.Token jwtToken = jwtUtil.generateClientToken(recruiterDTO);
+        return publicController.toUserResponse(recruiterDTO, jwtToken);
     }
 
     @Data
@@ -162,5 +194,20 @@ public class RecruiterController {
     @Data
     public static class GoogleAuthUrl {
         private String url;
+    }
+
+    @Data
+    public static class CandidateDetails {
+        private String id;
+        private String name;
+        private String email;
+        private String mobileNumber;
+        private Integer age;
+        private String gender;
+        private List<String> skills;
+        private String highestQualification;
+        private String profileImageId;
+        private String resumeId;
+        private String location;
     }
 }
