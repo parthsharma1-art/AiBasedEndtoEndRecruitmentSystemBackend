@@ -2,18 +2,12 @@ package com.aibackend.AiBasedEndtoEndSystem.controller;
 
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
+import com.aibackend.AiBasedEndtoEndSystem.entity.Chat;
+import com.aibackend.AiBasedEndtoEndSystem.service.ChatService;
+import com.aibackend.AiBasedEndtoEndSystem.service.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -30,6 +24,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/candidate")
 @Slf4j
@@ -43,6 +39,10 @@ public class CandidateController {
     private PublicController publicController;
     @Autowired
     private AuthAppConfig authAppConfig;
+    @Autowired
+    private ChatService chatService;
+    @Autowired
+    private NotificationService notificationService;
 
     @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public PublicController.UserResponse createNewCandidate(
@@ -82,6 +82,51 @@ public class CandidateController {
         response.setResumeId(candidate.getResumeId());
         response.setProfileImageId(candidate.getProfileImageId());
         return response;
+    }
+
+    @PostMapping("/chats")
+    public Chat createChat(@RequestBody RecruiterController.ChatRequest request) {
+        log.info("Create or update Chats :{}", request);
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null)
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        return chatService.createOrUpdateChat(user,request, Chat.Source.CANDIDATE);
+    }
+
+    @GetMapping("/chats/{id}")
+    public ChatService.ChatResponse getChats(@PathVariable String id) {
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null)
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        log.info("Get chat for the user :{}",id);
+        return chatService.getChats(user,id);
+    }
+
+    @GetMapping("/chats")
+    public List<ChatService.ChatResponse> getChatsForRecruiter() {
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null)
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        log.info("Get all chats for the user :{}",user);
+        return chatService.getAllChats(user, Chat.Source.CANDIDATE);
+    }
+
+    @GetMapping("/notifications")
+    public List<RecruiterController.NotificationResponse> getAllNotifications() {
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null)
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        log.info("Get All notifications for the user :{}", user);
+        return notificationService.getAllNotification(user);
+    }
+
+    @PostMapping("/notification/{id}")
+    public Boolean getNotificattionById(@PathVariable String id) {
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null)
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        log.info("Get notifications for the user :{}", user);
+        return notificationService.markReadNotification(user,id);
     }
 
     @Data

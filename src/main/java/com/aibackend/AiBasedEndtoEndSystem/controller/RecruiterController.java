@@ -3,9 +3,11 @@ package com.aibackend.AiBasedEndtoEndSystem.controller;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 import java.io.IOException;
-import java.time.Instant;
 import java.util.List;
 
+import com.aibackend.AiBasedEndtoEndSystem.entity.Chat;
+import com.aibackend.AiBasedEndtoEndSystem.service.ChatService;
+import com.aibackend.AiBasedEndtoEndSystem.service.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -45,6 +47,10 @@ public class RecruiterController {
     private PublicController publicController;
     @Autowired
     private AuthAppConfig authAppConfig;
+    @Autowired
+    private ChatService chatService;
+    @Autowired
+    private NotificationService notificationService;
 
     @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public PublicController.UserResponse createNewHR(
@@ -94,7 +100,7 @@ public class RecruiterController {
             log.error("user not found for the ID ", user);
             throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
         }
-        return recruiterService.getCandidateDetailsById(user,id);
+        return recruiterService.getCandidateDetailsById(user, id);
     }
 
     @GetMapping("/google/login")
@@ -154,9 +160,9 @@ public class RecruiterController {
 
     @PutMapping(value = "/update", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public PublicController.UserResponse updateCandidate(@RequestHeader("Authorization") String authHeader,
-            @ModelAttribute RecruiterRequest request,
-            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
-            @RequestPart(value = "resume", required = false) MultipartFile idCard) {
+                                                         @ModelAttribute RecruiterRequest request,
+                                                         @RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
+                                                         @RequestPart(value = "resume", required = false) MultipartFile idCard) {
         log.info("Update Candidate Details :{}", request);
         UserDTO user = SecurityUtils.getLoggedInUser();
         if (user == null)
@@ -165,6 +171,51 @@ public class RecruiterController {
         recruiterDTO.setRole("Recruiter");
         JwtUtil.Token jwtToken = jwtUtil.generateClientToken(recruiterDTO);
         return publicController.toUserResponse(recruiterDTO, jwtToken);
+    }
+
+    @PostMapping("/chats")
+    public Chat createChat(@RequestBody ChatRequest request) {
+        log.info("Create or update Chats :{}", request);
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null)
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        return chatService.createOrUpdateChat(user, request, Chat.Source.RECRUITER);
+    }
+
+    @GetMapping("/chats/{id}")
+    public ChatService.ChatResponse getChats(@PathVariable String id) {
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null)
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        log.info("Get chat by id :{} for the user  :{}", id, user);
+        return chatService.getChats(user, id);
+    }
+
+    @GetMapping("/chats")
+    public List<ChatService.ChatResponse> getChatsForRecruiter() {
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null)
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        log.info("Get All chats for the user :{}", user);
+        return chatService.getAllChats(user, Chat.Source.RECRUITER);
+    }
+
+    @GetMapping("/notifications")
+    public List<RecruiterController.NotificationResponse> getAllNotifications() {
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null)
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        log.info("Get All notifications for the user :{}", user);
+        return notificationService.getAllNotification(user);
+    }
+
+    @PostMapping("/notification/{id}")
+    public Boolean markNotificationRead(@PathVariable String id) {
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null)
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        log.info("Get notifications for the user :{}", user);
+        return notificationService.markReadNotification(user,id);
     }
 
     @Data
@@ -209,5 +260,22 @@ public class RecruiterController {
         private String profileImageId;
         private String resumeId;
         private String location;
+    }
+
+    @Data
+    public static class ChatRequest {
+        private String recruiterId;
+        private String candidateId;
+        private String message;
+    }
+
+    @Data
+    public static class NotificationResponse {
+        private String id;
+        private String recruiterId;
+        private Boolean read;
+        private String message;
+        private String title;
+        private String relativeId;
     }
 }
