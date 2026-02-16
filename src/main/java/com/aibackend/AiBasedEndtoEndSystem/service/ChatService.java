@@ -94,7 +94,7 @@ public class ChatService {
         if (chat.isEmpty()) {
             throw new BadException("Chat not found for the id " + chatId);
         }
-        if (!chat.get().getRecruiterId().equals(userDTO.getId()) || !chat.get().getCandidateId().equals(userDTO.getId())) {
+        if (!chat.get().getRecruiterId().equals(userDTO.getId()) && !chat.get().getCandidateId().equals(userDTO.getId())) {
             throw new BadException("Invalid access to the chats " + userDTO.getId());
         }
         return toChatResponse(chat.get());
