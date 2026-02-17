@@ -14,6 +14,11 @@ server:
   port: 8081
   servlet:
     context-path: /api
+    redis:
+      host: localhost
+      port: 6380
+  cache:
+    type: redis
 app:
   oauth2:
     client:
