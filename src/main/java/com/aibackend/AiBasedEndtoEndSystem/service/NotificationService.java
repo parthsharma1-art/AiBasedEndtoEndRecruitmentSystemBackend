@@ -34,6 +34,7 @@ public class NotificationService {
         notification.setMessage(request.getMessage());
         notification.setRelativeId(chat.getId());
         notification.setTitle("New Message");
+        notification.setRead(Boolean.FALSE);
         switch (source) {
             case CANDIDATE:
                 notification.setSenderId(chat.getCandidateId());
@@ -59,7 +60,7 @@ public class NotificationService {
         return repository.save(notification);
     }
 
-    public Boolean markAllRead(UserDTO user, Chat.Source source) {
+    public Boolean markAllRead(UserDTO user) {
         log.info("Mark all read notification for the user :{}", user);
         List<Notification> notifications = repository.findByReceiverIdOrderByCreatedAtDesc(user.getId());
         if (notifications.isEmpty()) {
