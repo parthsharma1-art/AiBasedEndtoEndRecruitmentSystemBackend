@@ -196,7 +196,7 @@ public class RecruiterController {
         UserDTO user = SecurityUtils.getLoggedInUser();
         if (user == null)
             throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
-        log.info("Get All chats for the user :{}", user);
+        log.info("Get chats for the recruiter :{}", user);
         return chatService.getAllChats(user, Chat.Source.RECRUITER);
     }
 
@@ -216,6 +216,12 @@ public class RecruiterController {
             throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
         log.info("Get notifications for the user :{}", user);
         return notificationService.markReadNotification(user,id);
+    }
+
+    @PostMapping("/notification/mark-all-read")
+    public Boolean markAllReadyNotification() {
+        UserDTO userDTO = SecurityUtils.getLoggedInUser();
+        return notificationService.markAllRead(userDTO);
     }
 
     @Data

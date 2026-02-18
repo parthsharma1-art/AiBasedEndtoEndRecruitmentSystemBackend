@@ -90,7 +90,7 @@ public class CandidateController {
         UserDTO user = SecurityUtils.getLoggedInUser();
         if (user == null)
             throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
-        return chatService.createOrUpdateChat(user,request, Chat.Source.CANDIDATE);
+        return chatService.createOrUpdateChat(user, request, Chat.Source.CANDIDATE);
     }
 
     @GetMapping("/chats/{id}")
@@ -98,8 +98,8 @@ public class CandidateController {
         UserDTO user = SecurityUtils.getLoggedInUser();
         if (user == null)
             throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
-        log.info("Get chat for the user :{}",id);
-        return chatService.getChats(user,id);
+        log.info("Get chat for the user :{}", id);
+        return chatService.getChats(user, id);
     }
 
     @GetMapping("/chats")
@@ -107,7 +107,7 @@ public class CandidateController {
         UserDTO user = SecurityUtils.getLoggedInUser();
         if (user == null)
             throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
-        log.info("Get all chats for the user :{}",user);
+        log.info("Get chats for the candidate :{}", user);
         return chatService.getAllChats(user, Chat.Source.CANDIDATE);
     }
 
@@ -126,7 +126,13 @@ public class CandidateController {
         if (user == null)
             throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
         log.info("Get notifications for the user :{}", user);
-        return notificationService.markReadNotification(user,id);
+        return notificationService.markReadNotification(user, id);
+    }
+
+    @PostMapping("/notification/mark-all-read")
+    public Boolean markAllReadyNotification() {
+        UserDTO userDTO = SecurityUtils.getLoggedInUser();
+        return notificationService.markAllRead(userDTO);
     }
 
     @Data
@@ -186,8 +192,8 @@ public class CandidateController {
 
     @PutMapping(value = "/update", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public PublicController.UserResponse updateCandidate(@ModelAttribute CandidateRequest request,
-            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
-            @RequestPart(value = "resume", required = false) MultipartFile resume) {
+                                                         @RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
+                                                         @RequestPart(value = "resume", required = false) MultipartFile resume) {
         log.info("Update Candidate Details :{}", request);
         UserDTO user = SecurityUtils.getLoggedInUser();
         if (user == null)

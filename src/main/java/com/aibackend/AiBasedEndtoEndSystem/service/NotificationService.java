@@ -8,6 +8,7 @@ import com.aibackend.AiBasedEndtoEndSystem.repository.NotificationRepository;
 import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtility;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
 
@@ -22,16 +23,19 @@ public class NotificationService {
     private UniqueUtility uniqueUtility;
     @Autowired
     private NotificationRepository repository;
+    @Autowired
+    @Lazy
+    private ChatService chatService;
 
     public void createNotification(Chat.Source source,
-                                   RecruiterController.ChatRequest request,
+                                   String message,
                                    Chat chat) {
 
-        log.info("Create new notification for the request :{}", request);
+        log.info("Create new notification for the encrypted message :{}", message);
         Notification notification = new Notification();
         notification.setId(uniqueUtility.getNextNumber("NOTIFICATION", "notification"));
         notification.setCreatedAt(Instant.now());
-        notification.setMessage(request.getMessage());
+        notification.setMessage(message);
         notification.setRelativeId(chat.getId());
         notification.setTitle("New Message");
         switch (source) {
@@ -49,7 +53,6 @@ public class NotificationService {
         notification.setRecruiterId(chat.getRecruiterId());
         notification.setCandidateId(chat.getCandidateId());
         notification.setSource(source);
-
         saveNotification(notification);
     }
 
@@ -59,7 +62,7 @@ public class NotificationService {
         return repository.save(notification);
     }
 
-    public Boolean markAllRead(UserDTO user, Chat.Source source) {
+    public Boolean markAllRead(UserDTO user) {
         log.info("Mark all read notification for the user :{}", user);
         List<Notification> notifications = repository.findByReceiverIdOrderByCreatedAtDesc(user.getId());
         if (notifications.isEmpty()) {
@@ -85,7 +88,8 @@ public class NotificationService {
             RecruiterController.NotificationResponse response = new RecruiterController.NotificationResponse();
             response.setId(notification.getId());
             response.setTitle(notification.getTitle());
-            response.setMessage(notification.getMessage());
+            String message = chatService.safeDecrypt(notification.getMessage());
+            response.setMessage(message);
             response.setRead(notification.getRead());
             response.setRelativeId(notification.getRelativeId());
             list.add(response);
