@@ -218,6 +218,12 @@ public class RecruiterController {
         return notificationService.markReadNotification(user,id);
     }
 
+    @PostMapping("/notification/mark-all-read")
+    public Boolean markAllReadyNotification() {
+        UserDTO userDTO = SecurityUtils.getLoggedInUser();
+        return notificationService.markAllRead(userDTO);
+    }
+
     @Data
     public static class RecruiterResponse {
         private String id;
