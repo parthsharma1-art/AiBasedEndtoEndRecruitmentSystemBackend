@@ -8,7 +8,6 @@ import com.aibackend.AiBasedEndtoEndSystem.entity.Chat;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
 import com.aibackend.AiBasedEndtoEndSystem.repository.ChatRepository;
-import com.aibackend.AiBasedEndtoEndSystem.util.EncryptionUtil;
 import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtility;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -53,8 +52,7 @@ public class ChatService {
             chatData.setMessage(uniqueUtility.getNextNumber("MESSAGE_ID", "msg"));
             chatData.setCreatedAt(Instant.now());
             chatData.setCreatedBy(user.getId());
-            String message = EncryptionUtil.encrypt(request.getMessage());
-            chatData.setMessage(message);
+            chatData.setMessage(request.getMessage());
             chatData.setSource(source);
             chatDataList.add(chatData);
             chat.setChatData(chatDataList);
@@ -75,8 +73,7 @@ public class ChatService {
         chatData.setMessageId(uniqueUtility.getNextNumber("MESSAGE_ID", "msg"));
         chatData.setCreatedBy(user.getId());
         chatData.setSource(source);
-        String message = EncryptionUtil.encrypt(request.getMessage());
-        chatData.setMessage(message);
+        chatData.setMessage(request.getMessage());
         List<Chat.ChatData> chatDataList = new ArrayList<>();
         chatDataList.add(chatData);
         chat.setChatData(chatDataList);
@@ -125,28 +122,7 @@ public class ChatService {
         ChatResponse chatResponse = new ChatResponse();
         Candidate candidate = candidateService.getCandidateById(chat.getCandidateId());
         Recruiter recruiter = recruiterService.getRecruiterById(chat.getRecruiterId());
-        List<Chat.ChatData> chatDataList = chat.getChatData();
-
-        Chat chat1 = new Chat();
-        chat1.setId(chat.getId());
-        chat1.setCreatedAt(chat.getCreatedAt());
-        chat1.setUpdateAt(chat.getUpdateAt());
-        chat1.setCreatedBy(chat1.getCreatedBy());
-        chat1.setCandidateId(chat.getCandidateId());
-        chat1.setRecruiterId(chat.getRecruiterId());
-        List<Chat.ChatData> response = new ArrayList<>();
-        for (Chat.ChatData chatData : chatDataList) {
-            String decrypt = EncryptionUtil.decrypt(chatData.getMessage());
-            Chat.ChatData data = new Chat.ChatData();
-            data.setMessageId(chatData.getMessageId());
-            data.setMessage(decrypt);
-            data.setCreatedAt(chatData.getCreatedAt());
-            data.setSource(chatData.getSource());
-            data.setCreatedBy(chatData.getCreatedBy());
-            response.add(data);
-        }
-        chat1.setChatData(response);
-        chatResponse.setChat(chat1);
+        chatResponse.setChat(chat);
         chatResponse.setCandidateResponse(toCandidateRespone(candidate));
         chatResponse.setRecruiterResponse(toRecruiterResponse(recruiter));
         return chatResponse;
