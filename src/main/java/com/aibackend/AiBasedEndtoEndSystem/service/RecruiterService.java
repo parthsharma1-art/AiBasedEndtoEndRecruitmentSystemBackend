@@ -315,7 +315,7 @@ public class RecruiterService {
     }
 
     public Recruiter getRecruiterById(String id) {
-        log.info("Get recruiter id :{}", id);
+        log.info("Get recruiter by id :{}", id);
         Optional<Recruiter> recruiter = repository.findById(id);
         if (recruiter.isEmpty()) {
             return null;

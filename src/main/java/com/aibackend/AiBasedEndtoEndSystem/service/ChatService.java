@@ -54,6 +54,7 @@ public class ChatService {
             chatData.setCreatedAt(Instant.now());
             chatData.setCreatedBy(user.getId());
             String message = EncryptionUtil.encrypt(request.getMessage());
+            log.info("Encrypted message: {}", message);
             chatData.setMessage(message);
             chatData.setSource(source);
             chatDataList.add(chatData);
@@ -61,7 +62,7 @@ public class ChatService {
             chat.setUpdateAt(Instant.now());
             chat.setUpdatedBy(user.getId());
             chat = save(chat);
-            notificationService.createNotification(source, request, chat);
+            notificationService.createNotification(source, message, chat);
             return chat;
         }
         log.info("Creating new Chat for the request :{}", request);
@@ -75,12 +76,16 @@ public class ChatService {
         chatData.setMessageId(uniqueUtility.getNextNumber("MESSAGE_ID", "msg"));
         chatData.setCreatedBy(user.getId());
         chatData.setSource(source);
-        chatData.setMessage(request.getMessage());
+        String message = EncryptionUtil.encrypt(request.getMessage());
+        log.info("Encrypted message: {}", message);
+        chatData.setMessage(message);
         List<Chat.ChatData> chatDataList = new ArrayList<>();
         chatDataList.add(chatData);
         chat.setChatData(chatDataList);
+        chat.setUpdateAt(Instant.now());
+        chat.setUpdatedBy(user.getId());
         chat = save(chat);
-        notificationService.createNotification(source, request, chat);
+        notificationService.createNotification(source, message, chat);
         return chat;
 
     }
@@ -112,6 +117,7 @@ public class ChatService {
         if (ObjectUtils.isEmpty(chatList)) {
             log.info("Chat not found :{}", user);
         }
+        log.info("Chat response:{}", chatList);
         List<ChatResponse> chatResponses = new ArrayList<>();
         for (Chat chat : chatList) {
             chatResponses.add(toChatResponse(chat));
@@ -119,23 +125,33 @@ public class ChatService {
         return chatResponses;
     }
 
+    public String safeDecrypt(String msg) {
+        try {
+            return EncryptionUtil.decrypt(msg);
+        } catch (Exception e) {
+            return msg;
+        }
+    }
+
+
     private ChatResponse toChatResponse(Chat chat) {
         log.info("Converting to Chat response :{}", chat);
         ChatResponse chatResponse = new ChatResponse();
         Candidate candidate = candidateService.getCandidateById(chat.getCandidateId());
         Recruiter recruiter = recruiterService.getRecruiterById(chat.getRecruiterId());
         List<Chat.ChatData> chatDataList = chat.getChatData();
-
         Chat chat1 = new Chat();
         chat1.setId(chat.getId());
         chat1.setCreatedAt(chat.getCreatedAt());
+        chat1.setCreatedBy(chat1.getCreatedBy());
         chat1.setUpdateAt(chat.getUpdateAt());
         chat1.setCreatedBy(chat1.getCreatedBy());
         chat1.setCandidateId(chat.getCandidateId());
         chat1.setRecruiterId(chat.getRecruiterId());
         List<Chat.ChatData> response = new ArrayList<>();
         for (Chat.ChatData chatData : chatDataList) {
-            String decrypt = EncryptionUtil.decrypt(chatData.getMessage());
+            String decrypt = safeDecrypt(chatData.getMessage());
+            log.info("Decrypted message :{}", decrypt);
             Chat.ChatData data = new Chat.ChatData();
             data.setMessageId(chatData.getMessageId());
             data.setMessage(decrypt);
@@ -145,9 +161,10 @@ public class ChatService {
             response.add(data);
         }
         chat1.setChatData(response);
-        chatResponse.setChat(chat);
+        chatResponse.setChat(chat1);
         chatResponse.setCandidateResponse(toCandidateRespone(candidate));
         chatResponse.setRecruiterResponse(toRecruiterResponse(recruiter));
+        log.info("return response to the user :{}",chatResponse);
         return chatResponse;
 
     }

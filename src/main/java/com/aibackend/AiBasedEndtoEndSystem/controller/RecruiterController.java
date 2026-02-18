@@ -196,7 +196,7 @@ public class RecruiterController {
         UserDTO user = SecurityUtils.getLoggedInUser();
         if (user == null)
             throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
-        log.info("Get All chats for the user :{}", user);
+        log.info("Get chats for the recruiter :{}", user);
         return chatService.getAllChats(user, Chat.Source.RECRUITER);
     }
 

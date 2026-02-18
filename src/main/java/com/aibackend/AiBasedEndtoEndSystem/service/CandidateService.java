@@ -287,7 +287,7 @@ public class CandidateService {
     }
 
     public Candidate getCandidateById(String id) {
-        log.info("Get all candidates");
+        log.info("Get candidate by id :{}",id);
         return candidateRepository.findById(id).orElse(null);
     }
 }

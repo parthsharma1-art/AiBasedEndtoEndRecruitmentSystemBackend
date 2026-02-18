@@ -107,7 +107,7 @@ public class CandidateController {
         UserDTO user = SecurityUtils.getLoggedInUser();
         if (user == null)
             throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
-        log.info("Get all chats for the user :{}", user);
+        log.info("Get chats for the candidate :{}", user);
         return chatService.getAllChats(user, Chat.Source.CANDIDATE);
     }
 

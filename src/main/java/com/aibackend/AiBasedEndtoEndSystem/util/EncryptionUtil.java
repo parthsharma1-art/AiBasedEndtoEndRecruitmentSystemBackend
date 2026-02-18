@@ -9,7 +9,7 @@ import java.util.Base64;
 public class EncryptionUtil {
 
     private static final String ALGORITHM = "AES";
-    private static final String SECRET_KEY = "MySuperSecretKey"; // 16 chars
+    private static final String SECRET_KEY = "MySuperSecretKey";
 
     private static SecretKey getKey() {
         return new SecretKeySpec(SECRET_KEY.getBytes(), ALGORITHM);
