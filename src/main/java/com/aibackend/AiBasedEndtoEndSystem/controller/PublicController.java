@@ -82,7 +82,7 @@ public class PublicController {
 
     @Data
     public static class LoginRequest {
-        private String mobileNumber;
         private String email;
+        private String password;
     }
 }

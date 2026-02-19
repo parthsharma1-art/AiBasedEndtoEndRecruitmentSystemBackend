@@ -58,7 +58,7 @@ public class CandidateController {
 
     @PostMapping("/login")
     public PublicController.UserResponse login(@RequestBody PublicController.LoginRequest request) throws Exception {
-        UserDTO user = candidateService.getCandidateByMobileNumber(request);
+        UserDTO user = candidateService.getCandidateByEmailAndPassword(request);
         user.setRole("Candidate");
         JwtUtil.Token token = jwtUtil.generateClientToken(user);
         log.info("The token generated for login :{}", token);

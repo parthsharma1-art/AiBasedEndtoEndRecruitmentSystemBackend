@@ -2,6 +2,7 @@ package com.aibackend.AiBasedEndtoEndSystem.entity;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
@@ -16,10 +17,13 @@ public class Candidate {
 
     private String userId;                 // link to User collection
     private String name;
+    @Indexed(unique = true)
     private String email;
     private String mobileNumber;
     private Integer age;
     private String gender;
+    private String password;
+    private String confirmPassword;
 
     private Location location;
 

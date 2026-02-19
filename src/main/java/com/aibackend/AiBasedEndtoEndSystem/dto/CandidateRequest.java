@@ -22,6 +22,8 @@ public class CandidateRequest {
     private String profileImageUrl;
     private Integer expectedSalary;
     private String cityPreference;
+    private String password;
+    private String confirmPassword;
 
     @Data
     public static class LocationDTO {

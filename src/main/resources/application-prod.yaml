@@ -30,3 +30,10 @@ app.config:
     baseUrl: https://aibasedendtoendrecruitmentsystembackend.onrender.com
     frontEndUrl: https://ai-based-endto-end-recruitment-syst.vercel.app
     hostFrontEndUrl: https://ai-based-endto-end-recruitment-syst.vercel.app
+
+
+brevo:
+  api:
+    key: ${BREVO_API_KEY}
+  sender:
+    email: parthsharma7817@gmail.com

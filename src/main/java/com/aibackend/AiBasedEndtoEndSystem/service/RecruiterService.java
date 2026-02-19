@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.aibackend.AiBasedEndtoEndSystem.util.PasswordUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -65,7 +66,7 @@ public class RecruiterService {
     private CandidateService candidateService;
 
     public UserDTO createNewRecruiter(RecruiterController.RecruiterRequest request, MultipartFile profileImage,
-            MultipartFile idCard) {
+                                      MultipartFile idCard) {
         Recruiter recruiter = new Recruiter();
         validateRequest(request);
         Optional<Recruiter> existing = repository.findByMobileNumber(request.getMobileNumber());
@@ -93,6 +94,10 @@ public class RecruiterService {
             String idCardId = fileStorageService.storeFile(idCard);
             recruiter.setIdCardFileId(idCardId);
         }
+        String password = request.getPassword();
+        String confirmPassword = request.getConfirmPassword();
+        recruiter.setPassword(PasswordUtil.hashPassword(password));
+        recruiter.setConfirmPassword(PasswordUtil.hashPassword(confirmPassword));
 
         recruiter = save(recruiter);
         CompanyProfileController.CompanyProfileResponse resoponse = companyProfileService
@@ -140,6 +145,16 @@ public class RecruiterService {
         if (ObjectUtils.isEmpty(request.getDesignation())) {
             throw new HrException("Recruiter Designation is required");
         }
+        if (ObjectUtils.isEmpty(request.getPassword())) {
+            throw new HrException("Recruiter Password is required");
+        }
+        if (ObjectUtils.isEmpty(request.getDesignation())) {
+            throw new HrException("Recruiter Confirm Password is required");
+        }
+        log.info("Pass and confirm password :{} {}", request.getPassword(), request.getConfirmPassword());
+        if (!request.getPassword().equals(request.getConfirmPassword())) {
+            throw new BadException("Password and confirm password should be same");
+        }
     }
 
     public Recruiter findById(String id) {
@@ -150,15 +165,18 @@ public class RecruiterService {
     public UserDTO getUserLogin(PublicController.LoginRequest request) {
         log.info("User mobile Number :{}", request);
         Optional<Recruiter> recruiter = null;
-        if (!ObjectUtils.isEmpty(request.getMobileNumber())) {
-            recruiter = repository.findByMobileNumber(request.getMobileNumber());
-        } else {
-            recruiter = repository.findByEmail(request.getEmail());
-        }
+        recruiter = repository.findByEmail(request.getEmail());
         if (recruiter.isPresent()) {
-            return userService.toRecruiterDTO(recruiter.get());
+            String password = request.getPassword();
+            String hashedPassword = recruiter.get().getPassword();
+            Boolean value = PasswordUtil.matchPassword(password, hashedPassword);
+            if (value) {
+                return userService.toRecruiterDTO(recruiter.get());
+            } else {
+                throw new BadException("Password not match");
+            }
         }
-        return null;
+        throw new BadException("Invalid login");
 
     }
 
@@ -324,7 +342,7 @@ public class RecruiterService {
     }
 
     public UserDTO updateRecruiterDetails(RecruiterController.RecruiterRequest request, MultipartFile profileImage,
-            MultipartFile idCard, UserDTO userDTO) {
+                                          MultipartFile idCard, UserDTO userDTO) {
         log.info("Logged In Recruiter Id is :{}", userDTO.getId());
         validateRequest(request);
         Recruiter recruiter = getRecruiterById(userDTO.getId());
