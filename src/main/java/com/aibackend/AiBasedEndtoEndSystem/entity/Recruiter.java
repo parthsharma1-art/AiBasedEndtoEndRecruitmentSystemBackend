@@ -22,6 +22,8 @@ public class Recruiter {
     private String state;
     private String country;
     private String designation;
+    private String password;
+    private String confirmPassword;
 
     // File references
     private String profileImageId;

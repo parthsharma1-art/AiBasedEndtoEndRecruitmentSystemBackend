@@ -55,7 +55,9 @@ public class SecurityConfig {
                                 "/public/**",
                                 "/recruiter/**",
                                 "/candidate/**",
-                                "/file/**"   // important
+                                "/file/**"  ,
+                                "/api/auth/**",
+                                "/auth/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

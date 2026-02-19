@@ -132,6 +132,8 @@ public class RecruiterController {
         private String state;
         private String country;
         private String designation;
+        private String password;
+        private String confirmPassword;
     }
 
     @PostMapping("/logout")

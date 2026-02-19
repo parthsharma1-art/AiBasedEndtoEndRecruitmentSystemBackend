@@ -1,13 +1,13 @@
 package com.aibackend.AiBasedEndtoEndSystem.service;
 
-import static org.springframework.http.HttpStatus.OK;
-
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
+import com.aibackend.AiBasedEndtoEndSystem.util.PasswordUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -67,7 +67,6 @@ public class CandidateService {
         candidate.setMobileNumber(request.getMobileNumber());
         candidate.setAge(request.getAge());
         candidate.setGender(request.getGender());
-
         if (request.getLocation() != null) {
             Candidate.Location loc = new Candidate.Location();
             loc.setCity(request.getLocation().getCity());
@@ -91,6 +90,10 @@ public class CandidateService {
             String resumeId = fileStorageService.storeFile(resume);
             candidate.setResumeId(resumeId);
         }
+        String password = request.getPassword();
+        String confirmPassword = request.getConfirmPassword();
+        candidate.setPassword(PasswordUtil.hashPassword(password));
+        candidate.setConfirmPassword(PasswordUtil.hashPassword(confirmPassword));
         candidateRepository.save(candidate);
         log.info("Saved Candidate :{}", candidate);
         return userService.toCandidateDTO(candidate);
@@ -126,21 +129,32 @@ public class CandidateService {
 
         if (ObjectUtils.isEmpty(request.getHighestQualification()))
             throw new BadException("Highest qualification is required");
-
+        if (ObjectUtils.isEmpty(request.getPassword())) {
+            throw new BadException("Password is required");
+        }
+        if (ObjectUtils.isEmpty(request.getConfirmPassword())) {
+            throw new BadException("Confirm Password is required");
+        }
+        if (!request.getPassword().equals(request.getConfirmPassword())) {
+            throw new BadException("Password and confirm password should be match");
+        }
     }
 
-    public UserDTO getCandidateByMobileNumber(PublicController.LoginRequest request) {
-        log.info("Get the candidate for mobile Number :{}", request);
-        Optional<Candidate> existing = null;
-        if (!ObjectUtils.isEmpty(request.getEmail())) {
-            existing = candidateRepository.findByEmail(request.getEmail());
-        } else {
-            existing = candidateRepository.findByMobileNumber(request.getMobileNumber());
+    public UserDTO getCandidateByEmailAndPassword(PublicController.LoginRequest request) {
+        log.info("Candidate email and password details  :{}", request);
+        Optional<Candidate> candidate = null;
+        candidate = candidateRepository.findByEmail(request.getEmail());
+        if (candidate.isPresent()) {
+            String password = request.getPassword();
+            String hashedPassword = candidate.get().getPassword();
+            Boolean value = PasswordUtil.matchPassword(password, hashedPassword);
+            if (value) {
+                return userService.toCandidateDTO(candidate.get());
+            } else {
+                throw new BadException("Password not match");
+            }
         }
-        if (existing.isPresent()) {
-            return userService.toCandidateDTO(existing.get());
-        }
-        throw new BadException("No Candidate found with this " + request.getMobileNumber());
+        throw new BadException("Candidate not found");
     }
 
     public Candidate findById(String id) {
@@ -236,7 +250,7 @@ public class CandidateService {
     }
 
     public UserDTO updateCandidateDetails(UserDTO user, CandidateRequest request, MultipartFile profileImage,
-            MultipartFile resume) {
+                                          MultipartFile resume) {
         log.info("Update Candidate request for the id :{}", user);
         validateRequest(request);
         Candidate candidate = candidateRepository.findById(user.getId()).orElse(null);
@@ -287,7 +301,7 @@ public class CandidateService {
     }
 
     public Candidate getCandidateById(String id) {
-        log.info("Get candidate by id :{}",id);
+        log.info("Get candidate by id :{}", id);
         return candidateRepository.findById(id).orElse(null);
     }
 }
