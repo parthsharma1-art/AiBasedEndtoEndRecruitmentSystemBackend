@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import com.aibackend.AiBasedEndtoEndSystem.util.PasswordUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -59,6 +60,7 @@ public class RecruiterService {
     @Autowired
     private CompanyProfileService companyProfileService;
     @Autowired
+    @Lazy
     private JobPostingService jobPostingService;
     @Autowired
     private FileStorageService fileStorageService;

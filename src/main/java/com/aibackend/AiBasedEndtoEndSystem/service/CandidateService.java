@@ -6,9 +6,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.aibackend.AiBasedEndtoEndSystem.controller.CandidateApplyJobController;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
 import com.aibackend.AiBasedEndtoEndSystem.util.PasswordUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -52,6 +54,9 @@ public class CandidateService {
     private PublicController publicController;
     @Autowired
     private FileStorageService fileStorageService;
+    @Autowired
+    @Lazy
+    private JobApplicationService jobApplicationService;
 
     public UserDTO createNewCandidate(CandidateRequest request, MultipartFile profileImage, MultipartFile resume) {
         log.info("Create new candidate :{}", request);
@@ -303,5 +308,14 @@ public class CandidateService {
     public Candidate getCandidateById(String id) {
         log.info("Get candidate by id :{}", id);
         return candidateRepository.findById(id).orElse(null);
+    }
+
+    public List<CandidateApplyJobController.CandidateAppliedJobResponse> getAllAppliedJobs(UserDTO user) {
+        log.info("Getting all applied jobs for the user :{}", user);
+        Candidate candidate = getCandidateById(user.getId());
+        if (ObjectUtils.isEmpty(candidate)) {
+            throw new BadException("Candidate not found for ID :" + user.getId());
+        }
+        return jobApplicationService.getAllAppliedJobsforCandidate(candidate);
     }
 }

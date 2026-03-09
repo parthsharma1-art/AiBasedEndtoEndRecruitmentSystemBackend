@@ -1,9 +1,11 @@
 package com.aibackend.AiBasedEndtoEndSystem.service;
 
 import com.aibackend.AiBasedEndtoEndSystem.controller.CompanyProfileController;
+import com.aibackend.AiBasedEndtoEndSystem.controller.JobPostingController;
 import com.aibackend.AiBasedEndtoEndSystem.controller.PublicCompanyJobsController.PublicJobResponse;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.CompanyProfile;
+import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
@@ -24,23 +26,21 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class JobPostingService {
 
-    private final UniqueUtility uniqueUtiliy;
+    private final UniqueUtility uniqueUtility;
     private final JobPostingRepository repository;
+    @Lazy
+    private final RecruiterService recruiterService;
+    private final JobApplicationService jobApplicationService;
 
     @Lazy
     private final CompanyProfileService companyProfileService;
 
-    /*
-     * --------------------------------------------------
-     * CREATE JOB
-     * --------------------------------------------------
-     */
     public JobPostings createJob(
             CompanyProfileController.JobPostingsRequest request,
             CompanyProfile companyProfile) {
         log.info("Creating new job for company: {}", companyProfile.getId());
         JobPostings job = new JobPostings();
-        job.setId(uniqueUtiliy.getNextNumber("JOB_POSTING", "jobPosting"));
+        job.setId(uniqueUtility.getNextNumber("JOB_POSTING", "jobPosting"));
         job.setCompanyId(companyProfile.getId());
         job.setPostBy(companyProfile.getRecruiterId());
         job.setActive(Boolean.TRUE);
@@ -115,7 +115,9 @@ public class JobPostingService {
                 log.warn("Company not found for id: {}", job.getCompanyId());
                 continue;
             }
+
             PublicJobResponse response = getJobResponse(job, profile);
+            response.setTotalAppliedCandidates(jobApplicationService.totalJobAppliedCandidate(job.getId()));
             responses.add(response);
         }
 
@@ -136,11 +138,6 @@ public class JobPostingService {
         return response;
     }
 
-    /*
-     * --------------------------------------------------
-     * JOBS BY COMPANY
-     * --------------------------------------------------
-     */
     public List<CompanyProfileController.JobPostingsResponse> allJobsByCompanyId(String companyId) {
 
         log.info("Fetching jobs for company: {}", companyId);
@@ -151,11 +148,7 @@ public class JobPostingService {
                 .collect(Collectors.toList());
     }
 
-    /*
-     * --------------------------------------------------
-     * UPDATE JOB
-     * --------------------------------------------------
-     */
+
     public JobPostings updateJobPosting(
             String id,
             CompanyProfile companyProfile,
@@ -197,6 +190,31 @@ public class JobPostingService {
             return null;
         }
         return new CompanyProfileController.JobPostingsResponse(jobPostings);
+
+    }
+
+    public JobPostings getJobPostingById(String id) {
+        log.info("Get job Posting for the id :{}", id);
+        JobPostings jobPostings = repository.findById(id).orElse(null);
+        if (ObjectUtils.isEmpty(jobPostings)) {
+            log.info("Job not found for the id " + id);
+            return null;
+        }
+        return jobPostings;
+
+    }
+
+    public List<JobPostingController.JobApplicationResponse> getAllJobApplications(UserDTO user, String jobId) {
+        log.info("Get all job applications for the user :{} and jobID :{}", user, jobId);
+        Recruiter recruiter = recruiterService.getRecruiterById(user.getId());
+        if (ObjectUtils.isEmpty(recruiter)) {
+            throw new BadException("Recruiter not found for the ID " + user.getId());
+        }
+        JobPostings jobPostings = getJobPostingById(jobId);
+        if (ObjectUtils.isEmpty(jobPostings)) {
+            throw new BadException("Job not found for the ID " + jobId);
+        }
+        return jobApplicationService.getAllJobApplications(jobPostings);
 
     }
 }
