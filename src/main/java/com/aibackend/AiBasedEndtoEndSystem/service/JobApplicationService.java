@@ -131,6 +131,7 @@ public class JobApplicationService {
         response.setApplyDate(jobApplications.getAppliedAt());
         response.setCandidateName(jobApplications.getCandidateName());
         response.setResumeId(jobApplications.getResumeId());
+        response.setCandidateSkills(candidate.getSkills());
         return response;
     }
 

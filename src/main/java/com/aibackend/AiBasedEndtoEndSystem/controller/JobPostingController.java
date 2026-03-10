@@ -62,7 +62,7 @@ public class JobPostingController {
 
     }
 
-    @GetMapping("get/{jobId}/applications")
+    @GetMapping("/get/{jobId}/applications")
     public List<JobApplicationResponse> getJobApplications(@PathVariable String jobId) {
         log.info("Getting Job for the Id :{}", jobId);
         UserDTO user = SecurityUtils.getLoggedInUser();
@@ -81,6 +81,7 @@ public class JobPostingController {
         private JobApplications.JobStatus status;
         private String candidateId;
         private Integer atsScore;
+        private List<String> candidateSkills;
     }
 
 }
