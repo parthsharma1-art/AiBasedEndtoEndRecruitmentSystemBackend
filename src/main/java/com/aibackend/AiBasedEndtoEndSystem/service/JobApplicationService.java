@@ -153,6 +153,7 @@ public class JobApplicationService {
             response.setSalaryRange(jobPostings.getSalaryRange());
             response.setCompanyName(jobPostings.getCompanyId());
             response.setCandidateMobileNumber(jobApplications.getMobileNumber());
+            response.setJobStatus(jobApplications.getStatus());
             list.add(response);
 
         }

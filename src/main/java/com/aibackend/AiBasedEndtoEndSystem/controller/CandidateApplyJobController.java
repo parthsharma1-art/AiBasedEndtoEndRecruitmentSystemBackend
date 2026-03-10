@@ -1,6 +1,7 @@
 package com.aibackend.AiBasedEndtoEndSystem.controller;
 
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
+import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
 import com.aibackend.AiBasedEndtoEndSystem.service.CandidateService;
 import com.aibackend.AiBasedEndtoEndSystem.service.JobApplicationService;
@@ -59,5 +60,6 @@ public class CandidateApplyJobController {
         private String title;
         private JobPostings.JobType jobType;
         private String companyName;
+        private JobApplications.JobStatus jobStatus;
     }
 }
