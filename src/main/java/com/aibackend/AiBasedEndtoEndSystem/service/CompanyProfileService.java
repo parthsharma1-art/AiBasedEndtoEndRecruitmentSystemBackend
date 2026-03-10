@@ -139,7 +139,7 @@ public class CompanyProfileService {
     }
 
     public CompanyProfileController.JobPostingsResponse createJobPosting(UserDTO user,
-            CompanyProfileController.JobPostingsRequest request) {
+                                                                         CompanyProfileController.JobPostingsRequest request) {
         log.info("Creating job for the recruiter :{}", user);
         Optional<CompanyProfile> exist = repository.getCompanyProfileByRecruiterId(user.getId());
         if (exist.isEmpty()) {
@@ -147,8 +147,11 @@ public class CompanyProfileService {
         }
         CompanyProfile companyProfile = exist.get();
         if (!companyProfile.getRecruiterId().equals(user.getId())) {
-            log.error("Unauthorize access to the Company profile :{}", companyProfile.getId());
+            log.error("Unauthorize HR access to the Company profile :{}", companyProfile.getId());
             throw new BadException("Unauthorize access to the Company profile " + user.getId());
+        }
+        if (ObjectUtils.isEmpty(companyProfile.getBasicSetting())) {
+            throw new BadException("Basic Settings are required Before Posting jobs");
         }
         log.info("Request coming from frontend :{}", request);
         JobPostings jopPosting = jobPostingService.createJob(request, companyProfile);
@@ -172,7 +175,7 @@ public class CompanyProfileService {
     }
 
     public CompanyProfileController.JobPostingsResponse updateJobRequest(UserDTO user, String jobId,
-            CompanyProfileController.JobPostingsRequest request) {
+                                                                         CompanyProfileController.JobPostingsRequest request) {
         log.info("Updating job Reqeuest for the id:{}", jobId);
         Recruiter recruiter = recruiterService.getRecruiterById(user.getId());
         if (ObjectUtils.isEmpty(recruiter)) {
