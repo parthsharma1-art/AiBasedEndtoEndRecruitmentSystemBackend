@@ -438,4 +438,28 @@ public class RecruiterService {
         return details;
     }
 
+
+    public Boolean updateRecruiterPassword(UserDTO user, RecruiterController.UpdatePasswordRequest request) {
+        log.info("Updating password for the Recruiter ID :{}", user.getId());
+        if (ObjectUtils.isEmpty(request)) {
+            throw new BadException("Update Password Request is required");
+        }
+        if (ObjectUtils.isEmpty(request.getNewPassword())) {
+            throw new BadException("New Password Request is required");
+        }
+        if (ObjectUtils.isEmpty(request.getConfirmPassword())) {
+            throw new BadException("Confirm Password is required");
+        }
+        Recruiter recruiter = getRecruiterById(user.getId());
+        log.info("Logged in Recruiter is :{}", recruiter);
+        if (ObjectUtils.isEmpty(recruiter)) {
+            throw new BadException("Recruiter not found for the id " + user.getId());
+        }
+        String password = request.getNewPassword();
+        String confirmPassword = request.getConfirmPassword();
+        recruiter.setPassword(PasswordUtil.hashPassword(password));
+        recruiter.setConfirmPassword(PasswordUtil.hashPassword(confirmPassword));
+        save(recruiter);
+        return Boolean.TRUE;
+    }
 }

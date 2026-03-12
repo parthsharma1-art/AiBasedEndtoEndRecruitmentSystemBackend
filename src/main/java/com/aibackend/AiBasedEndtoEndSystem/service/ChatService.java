@@ -139,17 +139,16 @@ public class ChatService {
         ChatResponse chatResponse = new ChatResponse();
         Candidate candidate = candidateService.getCandidateById(chat.getCandidateId());
         Recruiter recruiter = recruiterService.getRecruiterById(chat.getRecruiterId());
-        List<Chat.ChatData> chatDataList = chat.getChatData();
         Chat chat1 = new Chat();
         chat1.setId(chat.getId());
         chat1.setCreatedAt(chat.getCreatedAt());
-        chat1.setCreatedBy(chat1.getCreatedBy());
+        chat1.setCreatedBy(chat.getCreatedBy());
         chat1.setUpdateAt(chat.getUpdateAt());
-        chat1.setCreatedBy(chat1.getCreatedBy());
+        chat1.setUpdatedBy(chat.getUpdatedBy());
         chat1.setCandidateId(chat.getCandidateId());
         chat1.setRecruiterId(chat.getRecruiterId());
         List<Chat.ChatData> response = new ArrayList<>();
-        for (Chat.ChatData chatData : chatDataList) {
+        for (Chat.ChatData chatData : chat.getChatData()) {
             String decrypt = safeDecrypt(chatData.getMessage());
             log.info("Decrypted message :{}", decrypt);
             Chat.ChatData data = new Chat.ChatData();
@@ -158,15 +157,16 @@ public class ChatService {
             data.setCreatedAt(chatData.getCreatedAt());
             data.setSource(chatData.getSource());
             data.setCreatedBy(chatData.getCreatedBy());
+
             response.add(data);
         }
         chat1.setChatData(response);
+        chatResponse.setChatId(chat.getId());
         chatResponse.setChat(chat1);
         chatResponse.setCandidateResponse(toCandidateRespone(candidate));
         chatResponse.setRecruiterResponse(toRecruiterResponse(recruiter));
-        log.info("return response to the user :{}",chatResponse);
+        log.info("return response to the user :{}", chatResponse);
         return chatResponse;
-
     }
 
     public CandidateController.CandidateResponse toCandidateRespone(Candidate candidate) {

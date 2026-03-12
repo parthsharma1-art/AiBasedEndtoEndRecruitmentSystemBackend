@@ -204,4 +204,10 @@ public class CandidateController {
         return publicController.toUserResponse(candidateDto, jwtToken);
     }
 
+    @PutMapping("/update-password")
+    public Boolean updateRecruiterPassword(@RequestBody RecruiterController.UpdatePasswordRequest request) {
+        UserDTO userDTO = SecurityUtils.getLoggedInUser();
+        return candidateService.updateCandidatePassword(userDTO, request);
+    }
+
 }

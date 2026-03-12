@@ -217,13 +217,25 @@ public class RecruiterController {
         if (user == null)
             throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
         log.info("Get notifications for the user :{}", user);
-        return notificationService.markReadNotification(user,id);
+        return notificationService.markReadNotification(user, id);
     }
 
     @PostMapping("/notification/mark-all-read")
     public Boolean markAllReadyNotification() {
         UserDTO userDTO = SecurityUtils.getLoggedInUser();
         return notificationService.markAllRead(userDTO);
+    }
+
+    @PostMapping("/update-password")
+    public Boolean updateRecruiterPassword(@RequestBody UpdatePasswordRequest request) {
+        UserDTO userDTO = SecurityUtils.getLoggedInUser();
+        return recruiterService.updateRecruiterPassword(userDTO, request);
+    }
+
+    @Data
+    public static class UpdatePasswordRequest {
+        private String newPassword;
+        private String confirmPassword;
     }
 
     @Data

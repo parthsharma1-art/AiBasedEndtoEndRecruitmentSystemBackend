@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import com.aibackend.AiBasedEndtoEndSystem.controller.CandidateApplyJobController;
+import com.aibackend.AiBasedEndtoEndSystem.controller.RecruiterController;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
 import com.aibackend.AiBasedEndtoEndSystem.util.PasswordUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -317,5 +318,30 @@ public class CandidateService {
             throw new BadException("Candidate not found for ID :" + user.getId());
         }
         return jobApplicationService.getAllAppliedJobsforCandidate(candidate);
+    }
+
+    public Boolean updateCandidatePassword(UserDTO user, RecruiterController.UpdatePasswordRequest request) {
+        log.info("Update password for the candidate :{}", user);
+
+        if (ObjectUtils.isEmpty(request)) {
+            throw new BadException("Update Password Request is required");
+        }
+        if (ObjectUtils.isEmpty(request.getNewPassword())) {
+            throw new BadException("New Password Request is required");
+        }
+        if (ObjectUtils.isEmpty(request.getConfirmPassword())) {
+            throw new BadException("Confirm Password is required");
+        }
+        Candidate candidate = getCandidateById(user.getId());
+        if (ObjectUtils.isEmpty(candidate)) {
+            throw new BadException("Candidate not found for the ID :" + user.getId());
+        }
+        log.info("Updating password for the Recruiter ID :{}", user.getId());
+        String password = request.getNewPassword();
+        String confirmPassword = request.getConfirmPassword();
+        candidate.setPassword(PasswordUtil.hashPassword(password));
+        candidate.setConfirmPassword(PasswordUtil.hashPassword(confirmPassword));
+        candidateRepository.save(candidate);
+        return Boolean.TRUE;
     }
 }
