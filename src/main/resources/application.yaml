@@ -38,7 +38,7 @@ app.config:
 
 brevo:
   api:
-     key: xsmtpsib-278937dd057e7dcc77c333c3128f9e7d21a5e354248b895978de76c52b44a2ea-J6qbIg1a93ZK6snO
+     key: ${BREVO_API_KEY}
   sender:
     email: parthsharma7817@gmail.com
 
