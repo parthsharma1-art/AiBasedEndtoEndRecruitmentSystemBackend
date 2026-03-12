@@ -2,7 +2,9 @@ package com.aibackend.AiBasedEndtoEndSystem.service;
 
 import com.aibackend.AiBasedEndtoEndSystem.controller.RecruiterController;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
+import com.aibackend.AiBasedEndtoEndSystem.entity.Candidate;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Chat;
+import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Notification;
 import com.aibackend.AiBasedEndtoEndSystem.repository.NotificationRepository;
 import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtility;
@@ -108,5 +110,19 @@ public class NotificationService {
         notifications.setUpdatedAt(Instant.now());
         saveNotification(notifications);
         return Boolean.TRUE;
+    }
+
+    public void createJobNotification(Candidate candidate, String message, JobPostings jobPostings) {
+        log.info("Create new notification for Applied Job :{}", message);
+        Notification notification = new Notification();
+        notification.setId(uniqueUtility.getNextNumber("NOTIFICATION", "notification"));
+        notification.setCreatedAt(Instant.now());
+        notification.setMessage(message);
+        notification.setReceiverId(candidate.getId());
+        notification.setRelativeId(jobPostings.getId());
+        notification.setTitle("Job Application Submitted");
+        notification.setCandidateId(candidate.getId());
+        notification.setSource(Chat.Source.CANDIDATE);
+        saveNotification(notification);
     }
 }

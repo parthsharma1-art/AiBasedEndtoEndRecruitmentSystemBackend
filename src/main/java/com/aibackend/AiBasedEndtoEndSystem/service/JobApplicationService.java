@@ -38,6 +38,8 @@ public class JobApplicationService {
     private UniqueUtility uniqueUtility;
     @Autowired
     private FileStorageService fileStorageService;
+    @Autowired
+    private NotificationService notificationService;
 
     public Boolean createNewJobApplications(UserDTO user, CandidateApplyJobController.ApplyJobRequest request, String jobId, MultipartFile resume) {
         log.info("Creating new Job Application for the user :{}", user);
@@ -95,7 +97,7 @@ public class JobApplicationService {
         } else {
             application.setResumeId(candidate.getResumeId());
         }
-
+        notificationService.createJobNotification(candidate, "Your application has been submitted successfully.", jobPostings);
         application = saveJobApplication(application);
         log.info("Saved Job applications :{}", application);
         return Boolean.TRUE;
