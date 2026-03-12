@@ -24,7 +24,7 @@ public class CandidateApplyJobController {
     @Autowired
     private CandidateService candidateService;
 
-    @PostMapping(value = "{jobId}/apply", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/{jobId}/apply", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Boolean createNewHR(
             @ModelAttribute ApplyJobRequest request, @PathVariable String jobId,
             @RequestPart(value = "resume", required = false) MultipartFile resume) {
