@@ -75,6 +75,7 @@ public class JobPostingController {
     @Data
     public static class JobApplicationResponse {
         private String id;
+        private String profileImageId;
         private String candidateName;
         private String resumeId;
         private Instant applyDate;

@@ -27,6 +27,7 @@ public class FileController {
 
     @GetMapping("/{id}")
     public ResponseEntity<byte[]> getFile(@PathVariable String id) {
+        log.info("File id is :{}",id);
 
         GridFSFile file = gridFsTemplate.findOne(
                 Query.query(Criteria.where("_id").is(new ObjectId(id)))
