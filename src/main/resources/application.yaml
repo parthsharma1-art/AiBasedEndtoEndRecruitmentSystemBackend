@@ -42,4 +42,8 @@ brevo:
   sender:
     email: parthsharma7817@gmail.com
 
+cron:
+  job:
+    time: ${CRON_JOB_TIME}
+
 
