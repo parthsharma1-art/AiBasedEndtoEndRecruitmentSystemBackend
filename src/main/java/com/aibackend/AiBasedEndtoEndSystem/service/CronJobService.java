@@ -4,6 +4,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+
 
 @Service
 @Slf4j
@@ -11,7 +13,7 @@ public class CronJobService {
 
     @Scheduled(cron = "${cron.job.time}")
     public void sendScheduledMessages() {
-        log.info("Started calculating sum value");
+        log.info("Started calculating sum value:{}", Instant.now());
         int sum = 0;
 
         for (int i = 0; i <= 5; i++) {
