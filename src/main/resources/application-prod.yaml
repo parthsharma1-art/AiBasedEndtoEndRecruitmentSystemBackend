@@ -37,3 +37,7 @@ brevo:
     key: ${BREVO_API_KEY}
   sender:
     email: parthsharma7817@gmail.com
+
+cron:
+  job:
+    time: ${CRON_JOB_TIME}
