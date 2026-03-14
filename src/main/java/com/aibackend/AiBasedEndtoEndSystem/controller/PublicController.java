@@ -11,6 +11,7 @@ import org.springframework.web.server.ResponseStatusException;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
+import com.aibackend.AiBasedEndtoEndSystem.service.BrevoEmailService;
 import com.aibackend.AiBasedEndtoEndSystem.service.UserService;
 import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
 import com.aibackend.AiBasedEndtoEndSystem.util.SecurityUtils;
@@ -26,6 +27,8 @@ public class PublicController {
     private UserService userService;
     @Autowired
     private JwtUtil jwtUtil;
+    @Autowired
+    private BrevoEmailService brevoEmailService;
 
     @PostMapping("/register")
     public UserResponse register(@RequestBody UserRequest request) throws Exception {
@@ -84,5 +87,34 @@ public class PublicController {
     public static class LoginRequest {
         private String email;
         private String password;
+    }
+
+
+    @PostMapping("/contact")
+    public ContactResponse sendContactEmail(@RequestBody ContactRequest request) {
+        log.info("Send email to contact for the request :{}",request);
+        try {
+            brevoEmailService.sendContactEmail(request);
+            ContactResponse response = new ContactResponse();
+            response.setSuccess(true);
+            response.setMessage("Email sent successfully");
+            return response;
+        } catch (Exception e) {
+            log.error("Failed to send contact email", e);
+            throw new ResponseStatusException(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR, "Failed to send email");
+        }
+    }
+
+    @Data
+    public static class ContactRequest {
+        private String email;
+        private String message;
+        private String source;
+    }
+
+    @Data
+    public static class ContactResponse {
+        private Boolean success;
+        private String message;
     }
 }
