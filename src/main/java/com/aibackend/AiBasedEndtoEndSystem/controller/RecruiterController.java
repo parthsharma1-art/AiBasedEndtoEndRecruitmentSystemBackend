@@ -257,9 +257,12 @@ public class RecruiterController {
     @Data
     public static class RecruiterOverview {
         private Integer totalJobs;
+        private Integer totalApplications;
         private Integer totalCandidates;
         private Integer totalResumes;
         private Integer activeJobs;
+        private Integer selected;
+        private Integer rejected;
     }
 
     @Data

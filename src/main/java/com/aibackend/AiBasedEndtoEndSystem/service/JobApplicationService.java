@@ -125,6 +125,16 @@ public class JobApplicationService {
 
     }
 
+    public List<JobApplications> getAllJobApplicationsDetails(JobPostings jobPostings) {
+        log.info("Getting all job applications for the ID :{}", jobPostings.getId());
+        List<JobApplications> jobApplications = repository.findByJobId(jobPostings.getId());
+        if (jobApplications.isEmpty()) {
+            return null;
+        }
+        return jobApplications;
+
+    }
+
     public JobPostingController.JobApplicationResponse toJobApplicationResponse(JobApplications jobApplications, Candidate candidate) {
         JobPostingController.JobApplicationResponse response = new JobPostingController.JobApplicationResponse();
         response.setId(jobApplications.getId());
