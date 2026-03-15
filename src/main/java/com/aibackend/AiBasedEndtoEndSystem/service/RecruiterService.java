@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.aibackend.AiBasedEndtoEndSystem.entity.*;
 import com.aibackend.AiBasedEndtoEndSystem.util.PasswordUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -28,10 +29,6 @@ import com.aibackend.AiBasedEndtoEndSystem.controller.RecruiterController;
 import com.aibackend.AiBasedEndtoEndSystem.controller.RecruiterController.CandidateDetails;
 import com.aibackend.AiBasedEndtoEndSystem.controller.RecruiterController.RecruiterOverview;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
-import com.aibackend.AiBasedEndtoEndSystem.entity.Candidate;
-import com.aibackend.AiBasedEndtoEndSystem.entity.CompanyProfile;
-import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
-import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
 import com.aibackend.AiBasedEndtoEndSystem.exception.HrException;
 import com.aibackend.AiBasedEndtoEndSystem.repository.RecruiterRepository;
@@ -66,6 +63,9 @@ public class RecruiterService {
     private FileStorageService fileStorageService;
     @Autowired
     private CandidateService candidateService;
+    @Autowired
+    @Lazy
+    private JobApplicationService jobApplicationService;
 
     public UserDTO createNewRecruiter(RecruiterController.RecruiterRequest request, MultipartFile profileImage,
                                       MultipartFile idCard) {
@@ -310,11 +310,12 @@ public class RecruiterService {
             log.info("No recruiter found");
             throw new BadException("Recruiter not found with this id " + user.getId());
         }
-        if (!ObjectUtils.isEmpty(recruiter) && !recruiter.getId().equals(user.getId())) {
+        if (!recruiter.getId().equals(user.getId())) {
             log.error("Unauthorize access to the Recruiter Dashboard:{}", user);
             throw new BadException("Unauthorize access to the Recruiter Dashboard ");
         }
-        CompanyProfile companyProfile = companyProfileService.getCompanyProfileByRecruiterId(recruiter.getId());
+        CompanyProfile companyProfile =
+                companyProfileService.getCompanyProfileByRecruiterId(recruiter.getId());
         if (ObjectUtils.isEmpty(companyProfile)) {
             log.error("No Company profile found for the recruiter :{}", recruiter.getId());
             throw new BadException("Company profile not found for the recruiter " + recruiter.getId());
@@ -323,14 +324,19 @@ public class RecruiterService {
         RecruiterOverview recruiterOverview = new RecruiterOverview();
         Integer activeJobs = 0;
         Integer totalJobs = 0;
+        int totalApplications = 0;
         for (JobPostings postings : jobPostings) {
             if (postings.isActive()) {
                 activeJobs++;
             }
             totalJobs++;
+            List<JobApplications> jobApplications =
+                    jobApplicationService.getAllJobApplicationsDetails(postings);
+            totalApplications += jobApplications.stream().count();
         }
         recruiterOverview.setActiveJobs(activeJobs);
         recruiterOverview.setTotalJobs(totalJobs);
+        recruiterOverview.setTotalApplications(totalApplications);
         return recruiterOverview;
     }
 
