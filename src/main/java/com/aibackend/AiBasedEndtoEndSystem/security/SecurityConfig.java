@@ -57,7 +57,8 @@ public class SecurityConfig {
                                 "/candidate/**",
                                 "/file/**"  ,
                                 "/api/auth/**",
-                                "/auth/**"
+                                "/auth/**",
+                                "/test/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

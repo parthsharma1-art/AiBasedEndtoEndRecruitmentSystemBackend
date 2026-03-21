@@ -8,8 +8,11 @@ import com.aibackend.AiBasedEndtoEndSystem.entity.CompanyProfile;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
+import com.aibackend.AiBasedEndtoEndSystem.entity.ShortlistEvaluationResult;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
+import com.aibackend.AiBasedEndtoEndSystem.repository.JobApplicationRepository;
 import com.aibackend.AiBasedEndtoEndSystem.repository.JobPostingRepository;
+import com.aibackend.AiBasedEndtoEndSystem.repository.ShortlistEvaluationResultRepository;
 import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtility;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +34,8 @@ public class JobPostingService {
     @Lazy
     private final RecruiterService recruiterService;
     private final JobApplicationService jobApplicationService;
+    private final JobApplicationRepository jobApplicationRepository;
+    private final ShortlistEvaluationResultRepository shortlistEvaluationResultRepository;
 
     @Lazy
     private final CompanyProfileService companyProfileService;
@@ -86,12 +91,28 @@ public class JobPostingService {
             log.error("Unauthorize access to the Company profile :{}", profile.getId());
             throw new BadException("Unauthorize access to the Company profile " + user.getId());
         }
-        return repository.findByCompanyId(profile.getId())
+        return repository.findByCompanyIdAndIsActiveTrue(profile.getId())
                 .stream()
                 .peek(job -> log.info("Job profile value: {}", job.getProfile()))
                 .map(CompanyProfileController.JobPostingsResponse::new)
                 .collect(Collectors.toList());
 
+    }
+
+    public List<CompanyProfileController.JobPostingsResponse> getAllInactiveJobs(UserDTO user) {
+        log.info("Fetching inactive (isActive=false) jobs for user: {}", user.getId());
+        CompanyProfile profile = companyProfileService.getCompanyProfileByRecruiterId(user.getId());
+        if (ObjectUtils.isEmpty(profile)) {
+            return Collections.emptyList();
+        }
+        if (!profile.getRecruiterId().equals(user.getId())) {
+            log.error("Unauthorize access to the Company profile :{}", profile.getId());
+            throw new BadException("Unauthorize access to the Company profile " + user.getId());
+        }
+        return repository.findByCompanyIdAndIsActiveFalse(profile.getId())
+                .stream()
+                .map(CompanyProfileController.JobPostingsResponse::new)
+                .collect(Collectors.toList());
     }
 
     public List<PublicJobResponse> getAllJobs() {
@@ -178,7 +199,8 @@ public class JobPostingService {
             log.error("job not found for the id :{}", id);
             throw new BadException("Job not found " + id);
         }
-        repository.delete(jobPostings);
+        jobPostings.setActive(false);
+        save(jobPostings);
         return true;
     }
 
@@ -216,5 +238,45 @@ public class JobPostingService {
         }
         return jobApplicationService.getAllJobApplications(jobPostings);
 
+    }
+
+    /**
+     * Latest AI shortlist evaluation plus job posting details for a job application (recruiter must own the job's company).
+     */
+    public JobPostingController.ShortlistEvaluationWithJobResponse getShortlistEvaluationForJobApplication(
+            UserDTO user,
+            String jobApplicationId) {
+        log.info("Get shortlist evaluation for job application {}", jobApplicationId);
+        Recruiter recruiter = recruiterService.getRecruiterById(user.getId());
+        if (ObjectUtils.isEmpty(recruiter)) {
+            throw new BadException("Recruiter not found for the ID " + user.getId());
+        }
+        JobApplications application =
+                jobApplicationRepository.findById(jobApplicationId).orElse(null);
+        if (ObjectUtils.isEmpty(application)) {
+            throw new BadException("Job application not found: " + jobApplicationId);
+        }
+        JobPostings job = getJobPostingById(application.getJobId());
+        if (ObjectUtils.isEmpty(job)) {
+            throw new BadException("Job not found for the ID " + application.getJobId());
+        }
+        CompanyProfile profile = companyProfileService.getCompanyProfileByRecruiterId(user.getId());
+        if (ObjectUtils.isEmpty(profile) || !profile.getId().equals(job.getCompanyId())) {
+            throw new BadException("Unauthorized access to this job application");
+        }
+        ShortlistEvaluationResult evaluation =
+                shortlistEvaluationResultRepository
+                        .findFirstByJobApplicationIdOrderByEvaluatedAtDesc(jobApplicationId)
+                        .orElse(null);
+        if (evaluation == null) {
+            return null;
+        }
+        return new JobPostingController.ShortlistEvaluationWithJobResponse(
+                evaluation, new CompanyProfileController.JobPostingsResponse(job));
+    }
+
+    public List<JobPostings> getAllActiveJobPostings() {
+        log.info("Return all posted jobs where isActive is true");
+        return repository.findByIsActiveTrue(Boolean.TRUE);
     }
 }

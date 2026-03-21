@@ -33,6 +33,7 @@ public class JobApplications {
         APPLIED,
         SHORTLISTED,
         REJECTED,
+        TEST_SCHEDULED,
         INTERVIEW_SCHEDULED,
         HIRED
     }

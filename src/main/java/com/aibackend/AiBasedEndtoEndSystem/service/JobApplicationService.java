@@ -1,6 +1,5 @@
 package com.aibackend.AiBasedEndtoEndSystem.service;
 
-
 import com.aibackend.AiBasedEndtoEndSystem.controller.CandidateApplyJobController;
 import com.aibackend.AiBasedEndtoEndSystem.controller.JobPostingController;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
@@ -40,8 +39,11 @@ public class JobApplicationService {
     private FileStorageService fileStorageService;
     @Autowired
     private NotificationService notificationService;
+    @Autowired
+    private ShortlistEvaluationResultService shortlistEvaluationResultService;
 
-    public Boolean createNewJobApplications(UserDTO user, CandidateApplyJobController.ApplyJobRequest request, String jobId, MultipartFile resume) {
+    public Boolean createNewJobApplications(UserDTO user, CandidateApplyJobController.ApplyJobRequest request,
+            String jobId, MultipartFile resume) {
         log.info("Creating new Job Application for the user :{}", user);
         if (ObjectUtils.isEmpty(request.getUseSameResume())) {
             throw new BadException("Resume value is required");
@@ -63,7 +65,8 @@ public class JobApplicationService {
         if (ObjectUtils.isEmpty(jobPostings)) {
             throw new BadException("Job not found for the id " + jobId);
         }
-        Optional<JobApplications> jobApplications = repository.findByCandidateIdAndJobId(candidate.getId(), jobPostings.getId());
+        Optional<JobApplications> jobApplications = repository.findByCandidateIdAndJobId(candidate.getId(),
+                jobPostings.getId());
         if (jobApplications.isPresent()) {
             throw new BadException("Already Applied");
         }
@@ -97,7 +100,8 @@ public class JobApplicationService {
         } else {
             application.setResumeId(candidate.getResumeId());
         }
-        notificationService.createJobNotification(candidate, "Your application has been submitted successfully.", jobPostings);
+        notificationService.createJobNotification(candidate, "Your application has been submitted successfully.",
+                jobPostings);
         application = saveJobApplication(application);
         log.info("Saved Job applications :{}", application);
         return Boolean.TRUE;
@@ -117,8 +121,13 @@ public class JobApplicationService {
         }
         List<JobPostingController.JobApplicationResponse> jobApplicationResponses = new ArrayList<>();
         for (JobApplications applications : jobApplications) {
+            ShortlistEvaluationResult shortlistEvaluationResult = shortlistEvaluationResultService
+                    .getShortlistEvaluationForJobApplication(applications.getId());
             Candidate candidate = candidateService.getCandidateById(applications.getCandidateId());
             JobPostingController.JobApplicationResponse response = toJobApplicationResponse(applications, candidate);
+            if (!ObjectUtils.isEmpty(shortlistEvaluationResult)) {
+                response.setAtsScore(shortlistEvaluationResult.getScore());
+            }
             jobApplicationResponses.add(response);
         }
         return jobApplicationResponses;
@@ -135,7 +144,8 @@ public class JobApplicationService {
 
     }
 
-    public JobPostingController.JobApplicationResponse toJobApplicationResponse(JobApplications jobApplications, Candidate candidate) {
+    public JobPostingController.JobApplicationResponse toJobApplicationResponse(JobApplications jobApplications,
+            Candidate candidate) {
         JobPostingController.JobApplicationResponse response = new JobPostingController.JobApplicationResponse();
         response.setId(jobApplications.getId());
         response.setStatus(jobApplications.getStatus());
@@ -148,7 +158,8 @@ public class JobApplicationService {
         return response;
     }
 
-    public List<CandidateApplyJobController.CandidateAppliedJobResponse> getAllAppliedJobsforCandidate(Candidate candidate) {
+    public List<CandidateApplyJobController.CandidateAppliedJobResponse> getAllAppliedJobsforCandidate(
+            Candidate candidate) {
         log.info("Get all applied jobs for the candidate :{}", candidate.getId());
         List<JobApplications> applications = repository.findByCandidateId(candidate.getId());
         List<CandidateApplyJobController.CandidateAppliedJobResponse> list = new ArrayList<>();
@@ -180,5 +191,9 @@ public class JobApplicationService {
         return applications.size();
     }
 
+    public JobApplications getJobApplicationById(String id) {
+        log.info("Get job application by ID :{}", id);
+        return repository.findById(id).orElse(null);
+    }
 
 }

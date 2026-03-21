@@ -67,6 +67,15 @@ public class CompanyProfileController {
 
     }
 
+    @GetMapping("/deleted-jobs")
+    public List<JobPostingsResponse> getAllDeletedJobs() {
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null)
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        log.info("Get inactive jobs for user :{}", user);
+        return jobPostingService.getAllInactiveJobs(user);
+    }
+
     @PostMapping("/job/post")
     public JobPostingsResponse createJob(@RequestBody JobPostingsRequest request) {
         log.info("The job posting request is :{}", request);
