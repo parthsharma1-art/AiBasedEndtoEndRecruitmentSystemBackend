@@ -210,4 +210,9 @@ public class CandidateController {
         return candidateService.updateCandidatePassword(userDTO, request);
     }
 
+    @PostMapping("/shortlisted/start")
+    public void startTest(){
+        
+    }
+
 }

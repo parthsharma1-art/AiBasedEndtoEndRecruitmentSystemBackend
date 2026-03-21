@@ -46,6 +46,16 @@ cron:
     shortlistEvaluation:
       time: ${CRON_SHORTLIST_EVALUATION_TIME:0 0 */14 * * *}
 
+
+ai-service:
+  base-url: ${AI_SERVICE_BASE_URL:https://aibasedendtoendrecruitmentsystemaiservic.onrender.com}
+
 shortlist:
   evaluate:
-    url: http://127.0.0.1:8000/shortlist/evaluate
+    url: ${ai-service.base-url}/shortlist/evaluate
+
+ai:
+  test:
+    generate:
+      url: ${ai-service.base-url}/test/generate
+
