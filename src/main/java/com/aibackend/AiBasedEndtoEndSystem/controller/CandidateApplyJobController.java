@@ -1,24 +1,39 @@
 package com.aibackend.AiBasedEndtoEndSystem.controller;
 
+import static org.springframework.http.HttpStatus.UNAUTHORIZED;
+
+import java.time.Instant;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
+
+import com.aibackend.AiBasedEndtoEndSystem.dto.StartTestResultSafeResponse;
+import com.aibackend.AiBasedEndtoEndSystem.dto.TestAnswerSubmissionRequest;
+import com.aibackend.AiBasedEndtoEndSystem.dto.TestEvaluationResponse;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
 import com.aibackend.AiBasedEndtoEndSystem.service.CandidateService;
 import com.aibackend.AiBasedEndtoEndSystem.service.JobApplicationService;
 import com.aibackend.AiBasedEndtoEndSystem.util.SecurityUtils;
-import lombok.Data;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.service.annotation.GetExchange;
 
-import java.time.Instant;
-import java.util.List;
+import lombok.Data;
 
 @RestController
 @RequestMapping("/jobs")
 public class CandidateApplyJobController {
+
     @Autowired
     private JobApplicationService jobApplicationService;
     @Autowired
@@ -36,6 +51,35 @@ public class CandidateApplyJobController {
     public List<CandidateAppliedJobResponse> getAllAppliedJobs() {
         UserDTO userDTO = SecurityUtils.getLoggedInUser();
         return candidateService.getAllAppliedJobs(userDTO);
+    }
+
+    @PostMapping("/applied/{jobApplicationId}/shortlisted/start")
+    public StartTestResultSafeResponse startTest(@PathVariable String jobApplicationId) {
+        UserDTO userDTO = SecurityUtils.getLoggedInUser();
+        if (userDTO == null) {
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        }
+        return jobApplicationService.startTestForJobApplication(userDTO, jobApplicationId);
+    }
+
+    @PostMapping(value = "/applied/{jobApplicationId}/shortlisted/answer-evaluation", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public TestEvaluationResponse submitAndEvaluateAnswers(
+            @PathVariable String jobApplicationId, @RequestBody TestAnswerSubmissionRequest body) {
+        UserDTO userDTO = SecurityUtils.getLoggedInUser();
+        if (userDTO == null) {
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        }
+        return jobApplicationService.evaluateAndStoreTestAnswers(userDTO, jobApplicationId, body);
+    }
+
+    @PostMapping("/applied/{jobApplicationId}/reject")
+    public Boolean rejectCandidate(@PathVariable String jobApplicationId) {
+        UserDTO userDTO = SecurityUtils.getLoggedInUser();
+        if (userDTO == null) {
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        }
+        return jobApplicationService.rejectJobApplication(userDTO, jobApplicationId);
+        
     }
 
     @Data
