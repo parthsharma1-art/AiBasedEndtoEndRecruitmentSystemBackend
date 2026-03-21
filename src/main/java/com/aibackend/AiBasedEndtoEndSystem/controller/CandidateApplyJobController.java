@@ -1,5 +1,6 @@
 package com.aibackend.AiBasedEndtoEndSystem.controller;
 
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 import java.time.Instant;
@@ -24,6 +25,7 @@ import com.aibackend.AiBasedEndtoEndSystem.dto.TestEvaluationResponse;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
+import com.aibackend.AiBasedEndtoEndSystem.controller.JobPostingController.ShortlistEvaluationWithJobResponse;
 import com.aibackend.AiBasedEndtoEndSystem.service.CandidateService;
 import com.aibackend.AiBasedEndtoEndSystem.service.JobApplicationService;
 import com.aibackend.AiBasedEndtoEndSystem.util.SecurityUtils;
@@ -60,6 +62,25 @@ public class CandidateApplyJobController {
             throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
         }
         return jobApplicationService.startTestForJobApplication(userDTO, jobApplicationId);
+    }
+
+    /**
+     * Same payload as {@code GET /api/profile/job/applications/{id}/shortlist-evaluation}, for the candidate who owns
+     * the application.
+     */
+    @GetMapping("/applied/{jobApplicationId}/shortlist-evaluation")
+    public ShortlistEvaluationWithJobResponse getShortlistEvaluationForMyApplication(
+            @PathVariable String jobApplicationId) {
+        UserDTO userDTO = SecurityUtils.getLoggedInUser();
+        if (userDTO == null) {
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        }
+        ShortlistEvaluationWithJobResponse result =
+                jobApplicationService.getShortlistEvaluationForOwnApplication(userDTO, jobApplicationId);
+        if (result == null) {
+            throw new ResponseStatusException(NOT_FOUND, "No shortlist evaluation found for this job application");
+        }
+        return result;
     }
 
     @PostMapping(value = "/applied/{jobApplicationId}/shortlisted/answer-evaluation", consumes = MediaType.APPLICATION_JSON_VALUE)

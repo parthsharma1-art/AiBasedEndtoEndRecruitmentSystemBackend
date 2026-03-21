@@ -21,6 +21,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.aibackend.AiBasedEndtoEndSystem.controller.CandidateApplyJobController;
+import com.aibackend.AiBasedEndtoEndSystem.controller.CompanyProfileController;
 import com.aibackend.AiBasedEndtoEndSystem.controller.JobPostingController;
 import com.aibackend.AiBasedEndtoEndSystem.dto.AiGeneratedTestPayload;
 import com.aibackend.AiBasedEndtoEndSystem.dto.CodingQuestion;
@@ -233,6 +234,39 @@ public class JobApplicationService {
     public JobApplications getJobApplicationById(String id) {
         log.info("Get job application by ID :{}", id);
         return repository.findById(id).orElse(null);
+    }
+
+    /**
+     * Latest shortlist evaluation + job posting for this application (candidate must own the application).
+     */
+    public JobPostingController.ShortlistEvaluationWithJobResponse getShortlistEvaluationForOwnApplication(
+            UserDTO user, String jobApplicationId) {
+        log.info("Get shortlist evaluation for candidate's job application {}", jobApplicationId);
+        if (ObjectUtils.isEmpty(user) || ObjectUtils.isEmpty(user.getId())) {
+            throw new BadException("User is required");
+        }
+        Candidate candidate = candidateService.getCandidateById(user.getId());
+        if (ObjectUtils.isEmpty(candidate)) {
+            throw new BadException("Candidate not found for the ID :" + user.getId());
+        }
+        JobApplications application = getJobApplicationById(jobApplicationId);
+        if (ObjectUtils.isEmpty(application)) {
+            throw new BadException("Job application not found: " + jobApplicationId);
+        }
+        if (!application.getCandidateId().equals(candidate.getId())) {
+            throw new BadException("Unauthorized access to this job application");
+        }
+        ShortlistEvaluationResult evaluation =
+                shortlistEvaluationResultService.getShortlistEvaluationForJobApplication(jobApplicationId);
+        if (evaluation == null) {
+            return null;
+        }
+        JobPostings job = jobPostingService.getJobPostingById(application.getJobId());
+        if (ObjectUtils.isEmpty(job)) {
+            throw new BadException("Job not found for the id " + application.getJobId());
+        }
+        return new JobPostingController.ShortlistEvaluationWithJobResponse(
+                evaluation, new CompanyProfileController.JobPostingsResponse(job));
     }
 
     public StartTestResultSafeResponse startTestForJobApplication(UserDTO user, String jobApplicationId) {
