@@ -50,12 +50,6 @@ cron:
     shortlistEvaluation:
       time: "${CRON_SHORTLIST_EVALUATION_TIME:0 0 */14 * * *}"
 
-http:
-  client:
-    ai:
-      connect-timeout-ms: 20000
-      read-timeout-ms: 180000
-
 ai-service:
   base-url: ${AI_SERVICE_BASE_URL:http://127.0.0.1:8000}
 
@@ -64,10 +58,6 @@ shortlist:
     url: ${ai-service.base-url}/shortlist/evaluate
 
 ai:
-  http:
-    shortlist:
-      max-retries: 3
-      retry-initial-delay-ms: 8000
   test:
     generate:
       url: ${ai-service.base-url}/test/generate
