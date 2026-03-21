@@ -23,7 +23,7 @@ public class CronJobService {
     private final JobApplicationService jobApplicationService;
     private final AiResumeEvaluatingService aiResumeEvaluatingService;
 
-    @Scheduled(cron = "${cron.job.time}")
+    @Scheduled(cron = "${cron.job.time:0 0 */14 * * *}")
     public void sendScheduledMessages() {
         log.info("Started calculating sum value:{}", Instant.now());
         int sum = 0;
@@ -35,7 +35,7 @@ public class CronJobService {
         log.info("Completed calculating sum value");
     }
 
-    @Scheduled(cron = "${cron.job.shortlistEvaluation.time}")
+    @Scheduled(cron = "${cron.job.shortlistEvaluation.time:0 0 */14 * * *}")
     public List<ShortlistEvaluationResult> evaluateShortlistForAllJobApplications() {
         log.info("evaluateShortlistForAllJobApplications started at {}", Instant.now());
         List<JobPostings> activeJobs = jobPostingService.getAllActiveJobPostings();
