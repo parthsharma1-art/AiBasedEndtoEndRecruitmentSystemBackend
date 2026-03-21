@@ -47,5 +47,11 @@ brevo:
 cron:
   job:
     time: ${CRON_JOB_TIME}
+    shortlistEvaluation:
+      time: ${CRON_SHORTLIST_EVALUATION_TIME:0 0 */14 * * *}
+
+shortlist:
+  evaluate:
+    url: https://aibasedendtoendrecruitmentsystemaiservic.onrender.com/shortlist/evaluate
 
 

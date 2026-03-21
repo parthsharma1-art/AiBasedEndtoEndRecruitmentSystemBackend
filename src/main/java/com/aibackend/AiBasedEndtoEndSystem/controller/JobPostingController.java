@@ -1,8 +1,13 @@
 package com.aibackend.AiBasedEndtoEndSystem.controller;
 
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications;
+import com.aibackend.AiBasedEndtoEndSystem.entity.ShortlistEvaluationResult;
+
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -72,6 +77,30 @@ public class JobPostingController {
 
     }
 
+    @GetMapping("/applications/{jobApplicationId}/shortlist-evaluation")
+    public ShortlistEvaluationWithJobResponse getShortlistEvaluationForJobApplication(
+            @PathVariable String jobApplicationId) {
+        log.info("Getting shortlist evaluation for job application {}", jobApplicationId);
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null) {
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        }
+        ShortlistEvaluationWithJobResponse result =
+                jobPostingService.getShortlistEvaluationForJobApplication(user, jobApplicationId);
+        if (result == null) {
+            throw new ResponseStatusException(NOT_FOUND, "No shortlist evaluation found for this job application");
+        }
+        return result;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ShortlistEvaluationWithJobResponse {
+        private ShortlistEvaluationResult shortlistEvaluation;
+        private CompanyProfileController.JobPostingsResponse jobPosting;
+    }
+
     @Data
     public static class JobApplicationResponse {
         private String id;
@@ -81,7 +110,7 @@ public class JobPostingController {
         private Instant applyDate;
         private JobApplications.JobStatus status;
         private String candidateId;
-        private Integer atsScore;
+        private double atsScore;
         private List<String> candidateSkills;
     }
 
