@@ -88,7 +88,7 @@ public class JobPostingController {
         ShortlistEvaluationWithJobResponse result =
                 jobPostingService.getShortlistEvaluationForJobApplication(user, jobApplicationId);
         if (result == null) {
-            throw new ResponseStatusException(NOT_FOUND, "No shortlist evaluation found for this job application");
+            return null;
         }
         return result;
     }
