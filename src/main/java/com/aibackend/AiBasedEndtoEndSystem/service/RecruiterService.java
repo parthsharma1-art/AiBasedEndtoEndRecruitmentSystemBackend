@@ -68,7 +68,7 @@ public class RecruiterService {
     private JobApplicationService jobApplicationService;
 
     public UserDTO createNewRecruiter(RecruiterController.RecruiterRequest request, MultipartFile profileImage,
-                                      MultipartFile idCard) {
+            MultipartFile idCard) {
         Recruiter recruiter = new Recruiter();
         validateRequest(request);
         Optional<Recruiter> existing = repository.findByMobileNumber(request.getMobileNumber());
@@ -314,13 +314,15 @@ public class RecruiterService {
             log.error("Unauthorize access to the Recruiter Dashboard:{}", user);
             throw new BadException("Unauthorize access to the Recruiter Dashboard ");
         }
-        CompanyProfile companyProfile =
-                companyProfileService.getCompanyProfileByRecruiterId(recruiter.getId());
+        CompanyProfile companyProfile = companyProfileService.getCompanyProfileByRecruiterId(recruiter.getId());
         if (ObjectUtils.isEmpty(companyProfile)) {
             log.error("No Company profile found for the recruiter :{}", recruiter.getId());
             throw new BadException("Company profile not found for the recruiter " + recruiter.getId());
         }
         List<JobPostings> jobPostings = jobPostingService.getAllJobPostings(recruiter);
+        if (jobPostings.isEmpty()) {
+            return null;
+        }
         RecruiterOverview recruiterOverview = new RecruiterOverview();
         Integer activeJobs = 0;
         Integer totalJobs = 0;
@@ -330,9 +332,10 @@ public class RecruiterService {
                 activeJobs++;
             }
             totalJobs++;
-            List<JobApplications> jobApplications =
-                    jobApplicationService.getAllJobApplicationsDetails(postings);
-            totalApplications += jobApplications.stream().count();
+            List<JobApplications> jobApplications = jobApplicationService.getAllJobApplicationsDetails(postings);
+            if (jobApplications != null) {
+                totalApplications += jobApplications.size(); 
+            }
         }
         recruiterOverview.setActiveJobs(activeJobs);
         recruiterOverview.setTotalJobs(totalJobs);
@@ -350,7 +353,7 @@ public class RecruiterService {
     }
 
     public UserDTO updateRecruiterDetails(RecruiterController.RecruiterRequest request, MultipartFile profileImage,
-                                          MultipartFile idCard, UserDTO userDTO) {
+            MultipartFile idCard, UserDTO userDTO) {
         log.info("Logged In Recruiter Id is :{}", userDTO.getId());
         validateRequest(request);
         Recruiter recruiter = getRecruiterById(userDTO.getId());
@@ -443,7 +446,6 @@ public class RecruiterService {
                 + candidate.getLocation().getCountry());
         return details;
     }
-
 
     public Boolean updateRecruiterPassword(UserDTO user, RecruiterController.UpdatePasswordRequest request) {
         log.info("Updating password for the Recruiter ID :{}", user.getId());
