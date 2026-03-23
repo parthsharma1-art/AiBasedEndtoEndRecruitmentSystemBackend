@@ -59,16 +59,21 @@ public class ShortlistEvaluationResultService {
     }
 
     public void updateJobApplicationStatusIfShortlisted(Boolean shortlisted, String jobApplicationId) {
-        if (!Boolean.TRUE.equals(shortlisted) || jobApplicationId == null || jobApplicationId.isBlank()) {
+        if (jobApplicationId == null || jobApplicationId.isBlank()) {
             return;
         }
-        JobApplications jobApplications =
-                jobApplicationRepository.findById(jobApplicationId).orElse(null);
+        log.info("shortlisted value :{} and job application Id :{}", shortlisted, jobApplicationId);
+        JobApplications jobApplications = jobApplicationRepository.findById(jobApplicationId).orElse(null);
         if (jobApplications == null) {
             log.warn("Job application {} not found; cannot set SHORTLISTED", jobApplicationId);
             return;
         }
-        jobApplications.setStatus(JobApplications.JobStatus.SHORTLISTED);
+        if (shortlisted) {
+            jobApplications.setStatus(JobApplications.JobStatus.SHORTLISTED);
+        } else {
+            jobApplications.setStatus(JobApplications.JobStatus.REJECTED);
+        }
+
         jobApplications.setUpdatedAt(Instant.now());
         jobApplicationRepository.save(jobApplications);
         log.info("Job application {} status set to SHORTLISTED (AI shortlist)", jobApplicationId);

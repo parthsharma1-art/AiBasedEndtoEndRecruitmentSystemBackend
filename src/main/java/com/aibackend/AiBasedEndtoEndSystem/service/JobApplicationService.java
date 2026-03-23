@@ -447,18 +447,46 @@ public class JobApplicationService {
         if (normSub.equals(normalizeMcqText(correct))) {
             return true;
         }
-        List<String> options = question.getOptions();
-        if (options != null && !options.isEmpty()) {
-            try {
-                int idx = Integer.parseInt(correct.trim());
-                if (idx >= 0 && idx < options.size()) {
-                    return normSub.equals(normalizeMcqText(options.get(idx)));
-                }
-            } catch (NumberFormatException ignored) {
-                // correct_answer is not a numeric index
-            }
+        String resolvedCorrectOption = resolveCorrectOptionText(question);
+        if (!resolvedCorrectOption.isBlank()) {
+            return normSub.equals(normalizeMcqText(resolvedCorrectOption));
         }
         return false;
+    }
+
+    private static String resolveCorrectOptionText(McqQuestion question) {
+        List<String> options = question.getOptions();
+        if (options == null || options.isEmpty()) {
+            return "";
+        }
+        String correct = question.getCorrectAnswer();
+        if (ObjectUtils.isEmpty(correct)) {
+            return "";
+        }
+        String trimmed = correct.trim();
+        try {
+            int idx = Integer.parseInt(trimmed);
+            // Support both 0-based and 1-based index formats from AI services.
+            if (idx >= 0 && idx < options.size()) {
+                return options.get(idx);
+            }
+            int oneBasedIdx = idx - 1;
+            if (oneBasedIdx >= 0 && oneBasedIdx < options.size()) {
+                return options.get(oneBasedIdx);
+            }
+        } catch (NumberFormatException ignored) {
+            // correct_answer is not numeric; try alphabetical index format.
+        }
+        if (trimmed.length() == 1) {
+            char ch = Character.toUpperCase(trimmed.charAt(0));
+            if (ch >= 'A' && ch <= 'Z') {
+                int idx = ch - 'A';
+                if (idx >= 0 && idx < options.size()) {
+                    return options.get(idx);
+                }
+            }
+        }
+        return "";
     }
 
     private static boolean evaluateCodingAnswer(CodingQuestion question, String submitted) {

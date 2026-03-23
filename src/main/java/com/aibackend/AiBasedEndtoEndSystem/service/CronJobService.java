@@ -35,7 +35,7 @@ public class CronJobService {
         log.info("Completed calculating sum value");
     }
 
-    @Scheduled(cron = "${cron.job.shortlistEvaluation.time:0 0 */14 * * *}")
+    // @Scheduled(cron = "${cron.job.shortlistEvaluation.time:0 0 */14 * * *}")
     public List<ShortlistEvaluationResult> evaluateShortlistForAllJobApplications() {
         log.info("evaluateShortlistForAllJobApplications started at {}", Instant.now());
         List<JobPostings> activeJobs = jobPostingService.getAllActiveJobPostings();
