@@ -69,7 +69,7 @@ public class ShortlistEvaluationResultService {
             return;
         }
         if (shortlisted) {
-            jobApplications.setStatus(JobApplications.JobStatus.SHORTLISTED);
+            jobApplications.setStatus(JobApplications.JobStatus.TEST_SCHEDULED);
         } else {
             jobApplications.setStatus(JobApplications.JobStatus.REJECTED);
         }

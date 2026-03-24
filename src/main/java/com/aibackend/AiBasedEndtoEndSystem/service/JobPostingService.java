@@ -1,10 +1,24 @@
 package com.aibackend.AiBasedEndtoEndSystem.service;
 
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Service;
+import org.springframework.util.ObjectUtils;
+
 import com.aibackend.AiBasedEndtoEndSystem.controller.CompanyProfileController;
 import com.aibackend.AiBasedEndtoEndSystem.controller.JobPostingController;
 import com.aibackend.AiBasedEndtoEndSystem.controller.PublicCompanyJobsController.PublicJobResponse;
+import com.aibackend.AiBasedEndtoEndSystem.dto.JobApplicationGeneratedTestDto;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.CompanyProfile;
+import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplicationGeneratedTest;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
@@ -14,15 +28,9 @@ import com.aibackend.AiBasedEndtoEndSystem.repository.JobApplicationRepository;
 import com.aibackend.AiBasedEndtoEndSystem.repository.JobPostingRepository;
 import com.aibackend.AiBasedEndtoEndSystem.repository.ShortlistEvaluationResultRepository;
 import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtility;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.stereotype.Service;
-import org.springframework.util.ObjectUtils;
-
-import java.time.Instant;
-import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -36,6 +44,7 @@ public class JobPostingService {
     private final JobApplicationService jobApplicationService;
     private final JobApplicationRepository jobApplicationRepository;
     private final ShortlistEvaluationResultRepository shortlistEvaluationResultRepository;
+    private final JobApplicationGeneratedTestService jobApplicationGeneratedTestService;
 
     @Lazy
     private final CompanyProfileService companyProfileService;
@@ -169,7 +178,6 @@ public class JobPostingService {
                 .collect(Collectors.toList());
     }
 
-
     public JobPostings updateJobPosting(
             String id,
             CompanyProfile companyProfile,
@@ -241,7 +249,8 @@ public class JobPostingService {
     }
 
     /**
-     * Latest AI shortlist evaluation plus job posting details for a job application (recruiter must own the job's company).
+     * Latest AI shortlist evaluation plus job posting details for a job application
+     * (recruiter must own the job's company).
      */
     public JobPostingController.ShortlistEvaluationWithJobResponse getShortlistEvaluationForJobApplication(
             UserDTO user,
@@ -251,8 +260,7 @@ public class JobPostingService {
         if (ObjectUtils.isEmpty(recruiter)) {
             throw new BadException("Recruiter not found for the ID " + user.getId());
         }
-        JobApplications application =
-                jobApplicationRepository.findById(jobApplicationId).orElse(null);
+        JobApplications application = jobApplicationRepository.findById(jobApplicationId).orElse(null);
         if (ObjectUtils.isEmpty(application)) {
             throw new BadException("Job application not found: " + jobApplicationId);
         }
@@ -264,15 +272,37 @@ public class JobPostingService {
         if (ObjectUtils.isEmpty(profile) || !profile.getId().equals(job.getCompanyId())) {
             throw new BadException("Unauthorized access to this job application");
         }
-        ShortlistEvaluationResult evaluation =
-                shortlistEvaluationResultRepository
-                        .findFirstByJobApplicationIdOrderByEvaluatedAtDesc(jobApplicationId)
-                        .orElse(null);
+        ShortlistEvaluationResult evaluation = shortlistEvaluationResultRepository
+                .findFirstByJobApplicationIdOrderByEvaluatedAtDesc(jobApplicationId)
+                .orElse(null);
+        JobApplicationGeneratedTest jobApplicationGeneratedTest = jobApplicationGeneratedTestService
+                .getJobApplicationGeneratedTestByJobPostingId(jobApplicationId);
+
         if (evaluation == null) {
             return null;
         }
+        JobApplicationGeneratedTestDto generatedTestDto = toJobApplicationGeneratedTestDto(jobApplicationGeneratedTest);
         return new JobPostingController.ShortlistEvaluationWithJobResponse(
-                evaluation, new CompanyProfileController.JobPostingsResponse(job));
+                evaluation, new CompanyProfileController.JobPostingsResponse(job), generatedTestDto);
+    }
+
+    private static JobApplicationGeneratedTestDto toJobApplicationGeneratedTestDto(JobApplicationGeneratedTest entity) {
+        if (ObjectUtils.isEmpty(entity)) {
+            return null;
+        }
+        return new JobApplicationGeneratedTestDto(
+                entity.getId(),
+                entity.getJobApplicationId(),
+                entity.getCandidateId(),
+                entity.getJobId(),
+                entity.getCreatedAt(),
+                entity.getMcqs(),
+                entity.getCodingQuestions(),
+                entity.getSubmittedMcqAnswers(),
+                entity.getSubmittedCodingAnswers(),
+                entity.getMcqEvaluations(),
+                entity.getCodingEvaluations(),
+                entity.getEvaluatedAt());
     }
 
     public List<JobPostings> getAllActiveJobPostings() {

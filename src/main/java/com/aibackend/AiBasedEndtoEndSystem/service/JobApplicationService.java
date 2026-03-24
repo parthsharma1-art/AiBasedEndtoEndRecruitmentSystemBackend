@@ -266,7 +266,7 @@ public class JobApplicationService {
             throw new BadException("Job not found for the id " + application.getJobId());
         }
         return new JobPostingController.ShortlistEvaluationWithJobResponse(
-                evaluation, new CompanyProfileController.JobPostingsResponse(job));
+                evaluation, new CompanyProfileController.JobPostingsResponse(job), null);
     }
 
     public StartTestResultSafeResponse startTestForJobApplication(UserDTO user, String jobApplicationId) {
@@ -285,7 +285,7 @@ public class JobApplicationService {
         if (!jobApplications.getCandidateId().equals(candidate.getId())) {
             throw new BadException("Unauthorize access to start test for the candidate Id :" + candidate.getId());
         }
-        if (!JobApplications.JobStatus.SHORTLISTED.equals(jobApplications.getStatus())) {
+        if (!JobApplications.JobStatus.TEST_SCHEDULED.equals(jobApplications.getStatus())) {
             throw new BadException("Test can only be started for shortlisted applications");
         }
         JobPostings job = jobPostingService.getJobPostingById(jobApplications.getJobId());
@@ -384,7 +384,7 @@ public class JobApplicationService {
         if (!jobApplications.getCandidateId().equals(candidate.getId())) {
             throw new BadException("Unauthorize access for the candidate Id :" + candidate.getId());
         }
-        if (!JobApplications.JobStatus.SHORTLISTED.equals(jobApplications.getStatus())) {
+        if (!JobApplications.JobStatus.TEST_SCHEDULED.equals(jobApplications.getStatus())) {
             throw new BadException("Answers can only be submitted for shortlisted applications");
         }
         JobApplicationGeneratedTest doc = jobApplicationGeneratedTestRepository
@@ -422,6 +422,22 @@ public class JobApplicationService {
 
         int mcqCorrect = (int) mcqResults.stream().filter(Boolean::booleanValue).count();
         int codingCorrect = (int) codingResults.stream().filter(Boolean::booleanValue).count();
+        int totalQuestions = mcqs.size() + coding.size();
+        int totalCorrect = mcqCorrect + codingCorrect;
+        double scorePercent = totalQuestions == 0 ? 0.0 : (totalCorrect * 100.0) / totalQuestions;
+
+        // Auto-finalize application from test score:
+        // 60% or above -> selected (HIRED), below 60% -> REJECTED.
+        if (scorePercent >= 50.0) {
+            jobApplications.setStatus(JobApplications.JobStatus.SHORTLISTED);
+        } else {
+            jobApplications.setStatus(JobApplications.JobStatus.REJECTED);
+        }
+        jobApplications.setUpdatedAt(Instant.now());
+        jobApplications.setUpdatedBy(candidate.getId());
+        saveJobApplication(jobApplications);
+        log.info("Test evaluated for application {} with score {}%, status set to {}",
+                jobApplicationId, scorePercent, jobApplications.getStatus());
 
         return TestEvaluationResponse.builder()
                 .jobApplicationId(jobApplicationId)

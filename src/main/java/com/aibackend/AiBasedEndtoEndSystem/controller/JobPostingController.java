@@ -1,8 +1,8 @@
 package com.aibackend.AiBasedEndtoEndSystem.controller;
 
-import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
+import com.aibackend.AiBasedEndtoEndSystem.dto.JobApplicationGeneratedTestDto;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications;
 import com.aibackend.AiBasedEndtoEndSystem.entity.ShortlistEvaluationResult;
 
@@ -48,7 +48,7 @@ public class JobPostingController {
 
     @PutMapping("/update/{jobId}")
     public CompanyProfileController.JobPostingsResponse updateJob(@PathVariable String jobId,
-                                                                  @RequestBody CompanyProfileController.JobPostingsRequest request) {
+            @RequestBody CompanyProfileController.JobPostingsRequest request) {
         log.info("The Update Job for the Id :{}", jobId);
         UserDTO user = SecurityUtils.getLoggedInUser();
         if (user == null)
@@ -85,12 +85,7 @@ public class JobPostingController {
         if (user == null) {
             throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
         }
-        ShortlistEvaluationWithJobResponse result =
-                jobPostingService.getShortlistEvaluationForJobApplication(user, jobApplicationId);
-        if (result == null) {
-            return null;
-        }
-        return result;
+        return jobPostingService.getShortlistEvaluationForJobApplication(user, jobApplicationId);
     }
 
     @Data
@@ -99,6 +94,8 @@ public class JobPostingController {
     public static class ShortlistEvaluationWithJobResponse {
         private ShortlistEvaluationResult shortlistEvaluation;
         private CompanyProfileController.JobPostingsResponse jobPosting;
+        private JobApplicationGeneratedTestDto generatedTest;
+
     }
 
     @Data
