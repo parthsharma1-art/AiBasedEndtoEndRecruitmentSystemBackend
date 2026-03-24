@@ -2,7 +2,9 @@ package com.aibackend.AiBasedEndtoEndSystem.controller;
 
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
+import com.aibackend.AiBasedEndtoEndSystem.dto.CandidateResumeAtsEvaluationResponse;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Chat;
+import com.aibackend.AiBasedEndtoEndSystem.service.CandidateResumeAtsService;
 import com.aibackend.AiBasedEndtoEndSystem.service.ChatService;
 import com.aibackend.AiBasedEndtoEndSystem.service.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +45,8 @@ public class CandidateController {
     private ChatService chatService;
     @Autowired
     private NotificationService notificationService;
+    @Autowired
+    private CandidateResumeAtsService candidateResumeAtsService;
 
     @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public PublicController.UserResponse createNewCandidate(
@@ -213,6 +217,25 @@ public class CandidateController {
     @PostMapping("/shortlisted/start")
     public void startTest(){
         
+    }
+
+    @PostMapping(value = "/resume/ats-score", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public CandidateResumeAtsEvaluationResponse evaluateResumeAtsScore(
+            @RequestPart("resume") MultipartFile resume) {
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null) {
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        }
+        return candidateResumeAtsService.evaluateAndSave(user.getId(), resume);
+    }
+
+    @GetMapping(value = "/resume/ats-score")
+    public List<CandidateResumeAtsEvaluationResponse> getEvaluateResumeAtsScore() {
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null) {
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        }
+        return candidateResumeAtsService.getEvaluations(user.getId());
     }
 
 }

@@ -42,7 +42,7 @@ public class CandidateApplyJobController {
     private CandidateService candidateService;
 
     @PostMapping(value = "/{jobId}/apply", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public Boolean createNewHR(
+    public Boolean createNewJobApplication(
             @ModelAttribute ApplyJobRequest request, @PathVariable String jobId,
             @RequestPart(value = "resume", required = false) MultipartFile resume) {
         UserDTO userDTO = SecurityUtils.getLoggedInUser();
@@ -64,10 +64,6 @@ public class CandidateApplyJobController {
         return jobApplicationService.startTestForJobApplication(userDTO, jobApplicationId);
     }
 
-    /**
-     * Same payload as {@code GET /api/profile/job/applications/{id}/shortlist-evaluation}, for the candidate who owns
-     * the application.
-     */
     @GetMapping("/applied/{jobApplicationId}/shortlist-evaluation")
     public ShortlistEvaluationWithJobResponse getShortlistEvaluationForMyApplication(
             @PathVariable String jobApplicationId) {

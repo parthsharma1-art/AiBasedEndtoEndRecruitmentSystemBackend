@@ -327,6 +327,9 @@ public class RecruiterService {
         Integer activeJobs = 0;
         Integer totalJobs = 0;
         int totalApplications = 0;
+        int rejectedApplications = 0;
+        int totalCandidates = 0;
+        int selected = 0;
         for (JobPostings postings : jobPostings) {
             if (postings.isActive()) {
                 activeJobs++;
@@ -334,12 +337,25 @@ public class RecruiterService {
             totalJobs++;
             List<JobApplications> jobApplications = jobApplicationService.getAllJobApplicationsDetails(postings);
             if (jobApplications != null) {
-                totalApplications += jobApplications.size(); 
+                totalApplications += jobApplications.size();
+                for (JobApplications application : jobApplications) {
+                    if (JobApplications.JobStatus.REJECTED.equals(application.getStatus())) {
+                        rejectedApplications++;
+                    }
+                    if (JobApplications.JobStatus.TEST_SCHEDULED.equals(application.getStatus()) || JobApplications.JobStatus.SHORTLISTED.equals(application.getStatus())) {
+                        selected++;
+                    }
+                }
             }
+
         }
+        totalCandidates = totalApplications;
         recruiterOverview.setActiveJobs(activeJobs);
         recruiterOverview.setTotalJobs(totalJobs);
         recruiterOverview.setTotalApplications(totalApplications);
+        recruiterOverview.setTotalCandidates(totalCandidates);
+        recruiterOverview.setRejected(rejectedApplications);
+        recruiterOverview.setSelected(selected);
         return recruiterOverview;
     }
 
