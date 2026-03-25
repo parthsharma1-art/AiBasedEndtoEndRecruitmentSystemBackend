@@ -48,7 +48,7 @@ cron:
 
 
 ai-service:
-  base-url: ${AI_SERVICE_BASE_URL:https://aibasedendtoendrecruitmentsystemaiservic.onrender.com}
+  base-url: ${AI_SERVICE_BASE_URL:https://aibasedendtoendrecruitmentsystemaiservic-xa2o.onrender.com}
 
 shortlist:
   evaluate:
