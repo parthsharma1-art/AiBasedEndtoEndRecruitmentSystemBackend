@@ -4,7 +4,6 @@ import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
-import javax.swing.text.html.Option;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,6 +19,8 @@ public interface JobApplicationRepository extends MongoRepository<JobApplication
     Optional<JobApplications> findByCandidateIdAndJobId(String candidateId,String jobId);
 
     List<JobApplications> findByJobId(String jobId);
+
+    List<JobApplications> findByJobIdAndStatus(String jobId, JobApplications.JobStatus status);
 
 
 }

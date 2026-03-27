@@ -2,6 +2,7 @@ package com.aibackend.AiBasedEndtoEndSystem.service;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -39,7 +40,6 @@ import com.aibackend.AiBasedEndtoEndSystem.entity.CompanyProfile;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplicationGeneratedTest;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
-import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
 import com.aibackend.AiBasedEndtoEndSystem.entity.ShortlistEvaluationResult;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
 import com.aibackend.AiBasedEndtoEndSystem.repository.JobApplicationGeneratedTestRepository;
@@ -182,6 +182,15 @@ public class JobApplicationService {
         }
         return jobApplications;
 
+    }
+
+    public List<JobApplications> getAllJobApplicationsDetailsByStatusApplied(JobPostings jobPostings, JobApplications.JobStatus status) {
+        log.info("Getting all job applications for the ID :{} and status :{}", jobPostings.getId(), status);
+        List<JobApplications> jobApplications = repository.findByJobIdAndStatus(jobPostings.getId(), status);
+        if (jobApplications.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return jobApplications;
     }
 
     public JobPostingController.JobApplicationResponse toJobApplicationResponse(JobApplications jobApplications,

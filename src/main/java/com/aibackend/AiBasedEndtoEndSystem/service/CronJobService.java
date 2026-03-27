@@ -2,14 +2,18 @@ package com.aibackend.AiBasedEndtoEndSystem.service;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications;
+import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications.JobStatus;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
 import com.aibackend.AiBasedEndtoEndSystem.entity.ShortlistEvaluationResult;
-import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications.JobStatus;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,47 +43,31 @@ public class CronJobService {
     public List<ShortlistEvaluationResult> evaluateShortlistForAllJobApplications() {
         log.info("evaluateShortlistForAllJobApplications started at {}", Instant.now());
         List<JobPostings> activeJobs = jobPostingService.getAllActiveJobPostings();
-        List<ShortlistEvaluationResult> results = new ArrayList<>();
         if (activeJobs == null || activeJobs.isEmpty()) {
             log.info("No active job postings to evaluate");
-            return results;
+            return new ArrayList<>();
         }
+        Map<JobPostings, List<JobApplications>> jobApplicationsMap = new HashMap<>();
         for (JobPostings job : activeJobs) {
-            log.info("Job posting id :{}", job.getId());
-            List<JobApplications> applications = jobApplicationService.getAllJobApplicationsDetails(job);
+            List<JobApplications> applications = jobApplicationService.getAllJobApplicationsDetailsByStatusApplied(job,
+                    JobStatus.APPLIED);
             if (applications == null || applications.isEmpty()) {
                 log.debug("No applications for job {}", job.getId());
                 continue;
             }
-            for (JobApplications application : applications) {
-                log.info("Evaluating application {} for job {}", application.getId(), job.getId());
-                if (application.getResumeId() == null || application.getResumeId().isBlank()) {
-                    log.warn("Skipping application {}: no resumeId", application.getId());
-                    continue;
-                }
-                if (!application.getStatus().equals(JobStatus.APPLIED)) {
-                    log.warn("Skipping application {}: status is {} (only APPLIED is evaluated)", application.getId(), application.getStatus());
-                    continue;
-                }
-
-                try {
-                    ShortlistEvaluationResult evaluation = aiResumeEvaluatingService
-                            .sendJobPostingAndResumeToShortlistEvaluate(
-                                    job,
-                                    application.getResumeId(),
-                                    application.getCandidateId(),
-                                    application.getId());
-                    results.add(evaluation);
-                } catch (Exception e) {
-                    log.error(
-                            "Shortlist evaluate failed for job {} application {}: {}",
-                            job.getId(),
-                            application.getId(),
-                            e.getMessage());
-                }
+            List<JobApplications> eligible = applications.stream()
+                    .filter(a -> a != null && a.getResumeId() != null && !a.getResumeId().isBlank())
+                    .collect(Collectors.toList());
+            if (!eligible.isEmpty()) {
+                jobApplicationsMap.put(job, eligible);
             }
         }
-        return results;
+        if (jobApplicationsMap.isEmpty()) {
+            log.info("No job applications to evaluate");
+            return new ArrayList<>();
+        }
+        log.info("Job applications to evaluate: {}", jobApplicationsMap.values().stream().mapToInt(List::size).sum());
+        return aiResumeEvaluatingService.sendBatchShortlistEvaluate(jobApplicationsMap);
     }
 
 }

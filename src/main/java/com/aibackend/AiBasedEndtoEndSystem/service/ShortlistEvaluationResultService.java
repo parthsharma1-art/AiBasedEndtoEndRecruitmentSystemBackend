@@ -1,6 +1,7 @@
 package com.aibackend.AiBasedEndtoEndSystem.service;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
@@ -56,6 +57,36 @@ public class ShortlistEvaluationResultService {
             log.warn("Could not parse or save shortlist evaluation response: {}", e.getMessage());
             return Optional.empty();
         }
+    }
+
+    public List<ShortlistEvaluationResult> persistShortlistEvaluationResults(
+            List<ShortlistEvaluationResult> evaluations,
+            List<String> candidateIds,
+            List<String> jobPostingIds,
+            List<String> jobApplicationIds,
+            List<String> resumeGridFsIds) {
+        if (evaluations == null || evaluations.isEmpty()) {
+            return List.of();
+        }
+        Instant now = Instant.now();
+        for (int i = 0; i < evaluations.size(); i++) {
+            ShortlistEvaluationResult stored = evaluations.get(i);
+            if (stored == null) {
+                continue;
+            }
+            stored.setId(null);
+            stored.setCandidateId(candidateIds != null && i < candidateIds.size() ? candidateIds.get(i) : null);
+            stored.setJobPostingId(jobPostingIds != null && i < jobPostingIds.size() ? jobPostingIds.get(i) : null);
+            stored.setJobApplicationId(
+                    jobApplicationIds != null && i < jobApplicationIds.size() ? jobApplicationIds.get(i) : null);
+            stored.setResumeId(resumeGridFsIds != null && i < resumeGridFsIds.size() ? resumeGridFsIds.get(i) : null);
+            stored.setEvaluatedAt(now);
+            stored.setCreatedAt(now);
+            stored.setUpdatedAt(now);
+            ShortlistEvaluationResult saved = repository.save(stored);
+            updateJobApplicationStatusIfShortlisted(saved.getShortlisted(), saved.getJobApplicationId());
+        }
+        return evaluations;
     }
 
     public void updateJobApplicationStatusIfShortlisted(Boolean shortlisted, String jobApplicationId) {
