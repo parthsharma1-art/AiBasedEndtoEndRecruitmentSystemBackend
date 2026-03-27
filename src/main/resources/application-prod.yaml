@@ -53,7 +53,7 @@ ai-service:
 shortlist:
   evaluate:
     url: ${ai-service.base-url}/shortlist/evaluate
-    batchUrl: ${ai-service.base-url}/shortlist/evaluate/batch
+    batchUrl: ${ai-service.base-url}/shortlist/evaluate-batch
 
 ai:
   test:

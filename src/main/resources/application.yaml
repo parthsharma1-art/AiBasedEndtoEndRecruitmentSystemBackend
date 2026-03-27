@@ -56,7 +56,7 @@ ai-service:
 shortlist:
   evaluate:
     url: ${ai-service.base-url}/shortlist/evaluate
-    batchUrl: ${ai-service.base-url}/shortlist/evaluate/batch
+    batchUrl: ${ai-service.base-url}/shortlist/evaluate-batch
   atsScore:
     url: ${ai-service.base-url}/shortlist/ats-score
 
