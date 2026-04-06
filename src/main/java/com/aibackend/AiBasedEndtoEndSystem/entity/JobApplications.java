@@ -23,6 +23,7 @@ public class JobApplications {
     private Instant appliedAt;
     private String resumeId;
 
+    private AIShortlistStatus aiShortlistStatus;
 
     private String createdBy;
     private String updatedBy;
@@ -31,10 +32,16 @@ public class JobApplications {
 
     public enum JobStatus {
         APPLIED,
+        UNDER_REVIEW,
         SHORTLISTED,
         REJECTED,
         TEST_SCHEDULED,
         INTERVIEW_SCHEDULED,
         HIRED
+    }
+
+    public enum AIShortlistStatus {
+        SHORTLISTED,
+        REJECTED,
     }
 }

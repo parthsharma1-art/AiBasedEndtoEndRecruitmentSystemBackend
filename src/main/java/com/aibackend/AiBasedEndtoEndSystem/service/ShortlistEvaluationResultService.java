@@ -1,14 +1,11 @@
 package com.aibackend.AiBasedEndtoEndSystem.service;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
-import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications;
 import com.aibackend.AiBasedEndtoEndSystem.entity.ShortlistEvaluationResult;
-import com.aibackend.AiBasedEndtoEndSystem.repository.JobApplicationRepository;
 import com.aibackend.AiBasedEndtoEndSystem.repository.ShortlistEvaluationResultRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -22,7 +19,7 @@ public class ShortlistEvaluationResultService {
 
     private final ShortlistEvaluationResultRepository repository;
     private final ObjectMapper objectMapper;
-    private final JobApplicationRepository jobApplicationRepository;
+    private final JobApplicationService jobApplicationService;
 
     public ShortlistEvaluationResult getShortlistEvaluationForJobApplication(String jobApplicationID) {
         log.info("Get Shortlist Evaluation for Job Application :{}", jobApplicationID);
@@ -51,7 +48,7 @@ public class ShortlistEvaluationResultService {
             stored.setUpdatedAt(now);
             ShortlistEvaluationResult saved = repository.save(stored);
             log.info("Saved shortlist evaluation result id={}", saved.getId());
-            updateJobApplicationStatusIfShortlisted(saved.getShortlisted(), jobApplicationId);
+            jobApplicationService.updateJobApplicationStatusIfShortlisted(saved.getShortlisted(), jobApplicationId);
             return Optional.of(saved);
         } catch (Exception e) {
             log.warn("Could not parse or save shortlist evaluation response: {}", e.getMessage());
@@ -59,54 +56,4 @@ public class ShortlistEvaluationResultService {
         }
     }
 
-    public List<ShortlistEvaluationResult> persistShortlistEvaluationResults(
-            List<ShortlistEvaluationResult> evaluations,
-            List<String> candidateIds,
-            List<String> jobPostingIds,
-            List<String> jobApplicationIds,
-            List<String> resumeGridFsIds) {
-        if (evaluations == null || evaluations.isEmpty()) {
-            return List.of();
-        }
-        Instant now = Instant.now();
-        for (int i = 0; i < evaluations.size(); i++) {
-            ShortlistEvaluationResult stored = evaluations.get(i);
-            if (stored == null) {
-                continue;
-            }
-            stored.setId(null);
-            stored.setCandidateId(candidateIds != null && i < candidateIds.size() ? candidateIds.get(i) : null);
-            stored.setJobPostingId(jobPostingIds != null && i < jobPostingIds.size() ? jobPostingIds.get(i) : null);
-            stored.setJobApplicationId(
-                    jobApplicationIds != null && i < jobApplicationIds.size() ? jobApplicationIds.get(i) : null);
-            stored.setResumeId(resumeGridFsIds != null && i < resumeGridFsIds.size() ? resumeGridFsIds.get(i) : null);
-            stored.setEvaluatedAt(now);
-            stored.setCreatedAt(now);
-            stored.setUpdatedAt(now);
-            ShortlistEvaluationResult saved = repository.save(stored);
-            updateJobApplicationStatusIfShortlisted(saved.getShortlisted(), saved.getJobApplicationId());
-        }
-        return evaluations;
-    }
-
-    public void updateJobApplicationStatusIfShortlisted(Boolean shortlisted, String jobApplicationId) {
-        if (jobApplicationId == null || jobApplicationId.isBlank()) {
-            return;
-        }
-        log.info("shortlisted value :{} and job application Id :{}", shortlisted, jobApplicationId);
-        JobApplications jobApplications = jobApplicationRepository.findById(jobApplicationId).orElse(null);
-        if (jobApplications == null) {
-            log.warn("Job application {} not found; cannot set SHORTLISTED", jobApplicationId);
-            return;
-        }
-        if (shortlisted) {
-            jobApplications.setStatus(JobApplications.JobStatus.TEST_SCHEDULED);
-        } else {
-            jobApplications.setStatus(JobApplications.JobStatus.REJECTED);
-        }
-
-        jobApplications.setUpdatedAt(Instant.now());
-        jobApplicationRepository.save(jobApplications);
-        log.info("Job application {} status set to SHORTLISTED (AI shortlist)", jobApplicationId);
-    }
 }

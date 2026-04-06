@@ -1,6 +1,7 @@
 package com.aibackend.AiBasedEndtoEndSystem.service;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -39,6 +40,8 @@ import com.aibackend.AiBasedEndtoEndSystem.entity.Candidate;
 import com.aibackend.AiBasedEndtoEndSystem.entity.CompanyProfile;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplicationGeneratedTest;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications;
+import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications.AIShortlistStatus;
+import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications.JobStatus;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
 import com.aibackend.AiBasedEndtoEndSystem.entity.ShortlistEvaluationResult;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
@@ -60,8 +63,6 @@ public class JobApplicationService {
     @Autowired
     private CandidateService candidateService;
     @Autowired
-    private RecruiterService recruiterService;
-    @Autowired
     @Lazy
     private JobPostingService jobPostingService;
     @Autowired
@@ -78,6 +79,10 @@ public class JobApplicationService {
     private ObjectMapper objectMapper;
     @Autowired
     private JobApplicationGeneratedTestRepository jobApplicationGeneratedTestRepository;
+    @Autowired
+    private AiResumeEvaluatingService aiResumeEvaluatingService;
+    @Autowired
+    private BrevoEmailService brevoEmailService;
 
     @Value("${ai.test.generate.url}")
     private String testGenerateUrl;
@@ -144,6 +149,15 @@ public class JobApplicationService {
                 jobPostings);
         application = saveJobApplication(application);
         log.info("Saved Job applications :{}", application);
+
+        if (!ObjectUtils.isEmpty(application.getResumeId()) && !application.getResumeId().isBlank()) {
+            aiResumeEvaluatingService.sendJobPostingAndResumeToShortlistEvaluate(
+                    jobPostings,
+                    application.getResumeId(),
+                    candidate.getId(),
+                    application.getId());
+        }
+
         return Boolean.TRUE;
 
     }
@@ -184,13 +198,21 @@ public class JobApplicationService {
 
     }
 
-    public List<JobApplications> getAllJobApplicationsDetailsByStatusApplied(JobPostings jobPostings, JobApplications.JobStatus status) {
+    public List<JobApplications> getAllJobApplicationsDetailsByStatusApplied(JobPostings jobPostings,
+            JobApplications.JobStatus status) {
         log.info("Getting all job applications for the ID :{} and status :{}", jobPostings.getId(), status);
         List<JobApplications> jobApplications = repository.findByJobIdAndStatus(jobPostings.getId(), status);
         if (jobApplications.isEmpty()) {
             return Collections.emptyList();
         }
         return jobApplications;
+    }
+
+    public List<JobApplications> getApplicationsForProcessing() {
+        Instant cutoffTime = Instant.now().minus(7, ChronoUnit.MINUTES);
+        return repository.findByStatusAndCreatedAtBefore(
+                JobApplications.JobStatus.UNDER_REVIEW,
+                cutoffTime);
     }
 
     public JobPostingController.JobApplicationResponse toJobApplicationResponse(JobApplications jobApplications,
@@ -246,7 +268,8 @@ public class JobApplicationService {
     }
 
     /**
-     * Latest shortlist evaluation + job posting for this application (candidate must own the application).
+     * Latest shortlist evaluation + job posting for this application (candidate
+     * must own the application).
      */
     public JobPostingController.ShortlistEvaluationWithJobResponse getShortlistEvaluationForOwnApplication(
             UserDTO user, String jobApplicationId) {
@@ -265,8 +288,8 @@ public class JobApplicationService {
         if (!application.getCandidateId().equals(candidate.getId())) {
             throw new BadException("Unauthorized access to this job application");
         }
-        ShortlistEvaluationResult evaluation =
-                shortlistEvaluationResultService.getShortlistEvaluationForJobApplication(jobApplicationId);
+        ShortlistEvaluationResult evaluation = shortlistEvaluationResultService
+                .getShortlistEvaluationForJobApplication(jobApplicationId);
         if (evaluation == null) {
             return null;
         }
@@ -298,6 +321,7 @@ public class JobApplicationService {
             throw new BadException("Test can only be started for shortlisted applications");
         }
         JobPostings job = jobPostingService.getJobPostingById(jobApplications.getJobId());
+        log.info("Job posted is :{} and job application is :{}", job, jobApplications);
         if (ObjectUtils.isEmpty(job)) {
             throw new BadException("Job not found for the id " + jobApplications.getJobId());
         }
@@ -638,6 +662,70 @@ public class JobApplicationService {
         saveJobApplication(application);
         log.info("Job application {} marked REJECTED (candidate {})", jobApplicationId, candidate.getId());
         return Boolean.TRUE;
+    }
+
+    public JobApplications updateJobApplicationStatusIfShortlisted(Boolean shortlisted, String jobApplicationId) {
+        if (jobApplicationId == null || jobApplicationId.isBlank()) {
+            return null;
+        }
+        log.info("shortlisted value :{} and job application Id :{}", shortlisted, jobApplicationId);
+        JobApplications jobApplications = repository.findById(jobApplicationId).orElse(null);
+        if (jobApplications == null) {
+            log.warn("Job application {} not found; cannot update status after AI shortlist", jobApplicationId);
+            return null;
+        }
+        if (Boolean.TRUE.equals(shortlisted)) {
+            jobApplications.setAiShortlistStatus(AIShortlistStatus.SHORTLISTED);
+        } else {
+            jobApplications.setAiShortlistStatus(AIShortlistStatus.REJECTED);
+        }
+        jobApplications.setStatus(JobApplications.JobStatus.UNDER_REVIEW);
+        jobApplications.setUpdatedAt(Instant.now());
+        JobApplications saved = saveJobApplication(jobApplications);
+        log.info("Job application {} status updated after AI shortlist (shortlisted={})", jobApplicationId,
+                shortlisted);
+        return saved;
+    }
+
+    public void updateJobApplicationAndSendNotification(JobApplications jobApplications, JobStatus jobStatus) {
+        jobApplications.setStatus(jobStatus);
+        jobApplications.setUpdatedAt(Instant.now());
+        saveJobApplication(jobApplications);
+        ShortlistEvaluationResult shortlistEvaluationResult = shortlistEvaluationResultService
+                .getShortlistEvaluationForJobApplication(jobApplications.getId());
+        sendShortlistNotificationEmail(jobApplications, shortlistEvaluationResult);
+
+    }
+
+    private void sendShortlistNotificationEmail(JobApplications application, ShortlistEvaluationResult evaluation) {
+        if (application == null || evaluation == null) {
+            return;
+        }
+        String jobTitle = Optional.ofNullable(jobPostingService.getJobPostingById(application.getJobId()))
+                .map(JobPostings::getTitle)
+                .filter(t -> t != null && !t.isBlank())
+                .orElse("this position");
+        String companyName = application.getCompanyName() != null && !application.getCompanyName().isBlank()
+                ? application.getCompanyName()
+                : "the company";
+        String candidateName = application.getCandidateName() != null && !application.getCandidateName().isBlank()
+                ? application.getCandidateName()
+                : "Candidate";
+        boolean shortlisted = Boolean.TRUE.equals(evaluation.getShortlisted());
+        brevoEmailService.sendApplicationShortlistResultEmail(
+                application.getCandidateEmail(),
+                candidateName,
+                jobTitle,
+                companyName,
+                shortlisted,
+                evaluation.getScore());
+
+        Candidate candidate = candidateService.getCandidateById(application.getCandidateId());
+        JobPostings job = jobPostingService.getJobPostingById(application.getJobId());
+        if (candidate != null && job != null) {
+            notificationService.createAiScreeningResultNotification(
+                    candidate, job, shortlisted, application.getId());
+        }
     }
 
 }

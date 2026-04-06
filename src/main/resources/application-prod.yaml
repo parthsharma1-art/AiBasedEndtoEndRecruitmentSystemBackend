@@ -44,7 +44,7 @@ cron:
   job:
     time: "${CRON_JOB_TIME:0 0 */14 * * *}"
     shortlistEvaluation:
-      time: "${CRON_SHORTLIST_EVALUATION_TIME:0 0 */14 * * *}"
+      time: "${CRON_SHORTLIST_EVALUATION_TIME:0 */8 * * * *}"
 
 
 ai-service:
