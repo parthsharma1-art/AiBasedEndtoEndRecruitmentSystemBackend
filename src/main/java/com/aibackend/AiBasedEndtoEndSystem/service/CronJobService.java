@@ -11,6 +11,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications;
+import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications.AIShortlistStatus;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications.JobStatus;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
 import com.aibackend.AiBasedEndtoEndSystem.entity.ShortlistEvaluationResult;
@@ -23,9 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class CronJobService {
 
-    private final JobPostingService jobPostingService;
     private final JobApplicationService jobApplicationService;
-    private final AiResumeEvaluatingService aiResumeEvaluatingService;
 
     @Scheduled(cron = "${cron.job.time:0 0 */14 * * *}")
     public void sendScheduledMessages() {
@@ -39,35 +38,25 @@ public class CronJobService {
         log.info("Completed calculating sum value");
     }
 
-    // @Scheduled(cron = "${cron.job.shortlistEvaluation.time:0 0 */14 * * *}")
-    public List<ShortlistEvaluationResult> evaluateShortlistForAllJobApplications() {
-        log.info("evaluateShortlistForAllJobApplications started at {}", Instant.now());
-        List<JobPostings> activeJobs = jobPostingService.getAllActiveJobPostings();
-        if (activeJobs == null || activeJobs.isEmpty()) {
-            log.info("No active job postings to evaluate");
-            return new ArrayList<>();
-        }
-        Map<JobPostings, List<JobApplications>> jobApplicationsMap = new HashMap<>();
-        for (JobPostings job : activeJobs) {
-            List<JobApplications> applications = jobApplicationService.getAllJobApplicationsDetailsByStatusApplied(job,
-                    JobStatus.APPLIED);
-            if (applications == null || applications.isEmpty()) {
-                log.debug("No applications for job {}", job.getId());
-                continue;
+    @Scheduled(cron = "${cron.job.shortlistEvaluation.time:0 */8 * * * *}")
+    public void scheduledShortlistEvaluationNotificationsAndStatusUpdates() {
+        log.info("scheduledShortlistEvaluationNotificationsAndStatusUpdates started at {}", Instant.now());
+        try {
+            List<JobApplications> results = jobApplicationService.getApplicationsForProcessing();
+            for (JobApplications jobApplications : results) {
+                if (AIShortlistStatus.SHORTLISTED.equals(jobApplications.getAiShortlistStatus())) {
+                    jobApplicationService.updateJobApplicationAndSendNotification(jobApplications,
+                            JobStatus.TEST_SCHEDULED);
+                } else {
+                    jobApplicationService.updateJobApplicationAndSendNotification(jobApplications, JobStatus.REJECTED);
+                }
+
             }
-            List<JobApplications> eligible = applications.stream()
-                    .filter(a -> a != null && a.getResumeId() != null && !a.getResumeId().isBlank())
-                    .collect(Collectors.toList());
-            if (!eligible.isEmpty()) {
-                jobApplicationsMap.put(job, eligible);
-            }
+            log.info("scheduledShortlistEvaluationNotificationsAndStatusUpdates finished, evaluations={}",
+                    results.size());
+        } catch (Exception e) {
+            log.error("scheduledShortlistEvaluationNotificationsAndStatusUpdates failed", e);
         }
-        if (jobApplicationsMap.isEmpty()) {
-            log.info("No job applications to evaluate");
-            return new ArrayList<>();
-        }
-        log.info("Job applications to evaluate: {}", jobApplicationsMap.values().stream().mapToInt(List::size).sum());
-        return aiResumeEvaluatingService.sendBatchShortlistEvaluate(jobApplicationsMap);
     }
 
 }

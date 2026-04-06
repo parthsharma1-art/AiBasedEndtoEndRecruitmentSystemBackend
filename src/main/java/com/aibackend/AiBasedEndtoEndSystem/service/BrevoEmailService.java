@@ -6,6 +6,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.server.ResponseStatusException;
@@ -28,16 +29,33 @@ public class BrevoEmailService {
         @Value("${brevo.receiver.email}")
         private String receiverEmail;
 
+        @Value("${app.config.url.frontEndUrl}")
+        private String frontEndUrl;
+
+        private static final String CANDIDATE_APPLIED_JOBS_PATH = "/candidate-dashboard/applied-jobs";
+
+        private String candidateAppliedJobsDashboardUrl() {
+                String base = frontEndUrl != null ? frontEndUrl.trim() : "";
+                if (base.isEmpty()) {
+                        return frontEndUrl + CANDIDATE_APPLIED_JOBS_PATH;
+                }
+                while (base.endsWith("/")) {
+                        base = base.substring(0, base.length() - 1);
+                }
+                return base + CANDIDATE_APPLIED_JOBS_PATH;
+        }
+
         private void sendEmail(String toEmail, String subject, String htmlContent, String senderName) throws Exception {
-                String escapedHtml = htmlContent.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ").replace("\r", "");
+                String escapedHtml = htmlContent.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ")
+                                .replace("\r", "");
                 String escapedSubject = subject.replace("\\", "\\\\").replace("\"", "\\\"");
 
                 String senderJson = (senderName != null && !senderName.isBlank())
-                        ? "\"sender\": {\"email\": \"%s\", \"name\": \"%s\"}"
-                        : "\"sender\": {\"email\": \"%s\"}";
+                                ? "\"sender\": {\"email\": \"%s\", \"name\": \"%s\"}"
+                                : "\"sender\": {\"email\": \"%s\"}";
                 String senderPart = (senderName != null && !senderName.isBlank())
-                        ? String.format(senderJson, senderEmail, senderName.replace("\"", "\\\""))
-                        : String.format(senderJson, senderEmail);
+                                ? String.format(senderJson, senderEmail, senderName.replace("\"", "\\\""))
+                                : String.format(senderJson, senderEmail);
 
                 String json = """
                                 {
@@ -63,6 +81,38 @@ public class BrevoEmailService {
         public void sendHtmlEmail(String toEmail, String otp) throws Exception {
                 String html = HtmlTemplateUtil.otpTemplate(otp);
                 sendEmail(toEmail, "Your OTP Code", html, null);
+        }
+
+        @Async
+        public void sendApplicationShortlistResultEmail(
+                        String toEmail,
+                        String candidateName,
+                        String jobTitle,
+                        String companyName,
+                        boolean shortlisted,
+                        Double score) {
+                try {
+                        if (toEmail == null || toEmail.isBlank()) {
+                                log.warn("Skipping shortlist notification email: candidate email missing");
+                                return;
+                        }
+                        String html;
+                        String subject;
+                        String dashboardUrl = candidateAppliedJobsDashboardUrl();
+                        if (shortlisted) {
+                                subject = "Your application stood out — next steps inside";
+                                html = HtmlTemplateUtil.applicationShortlistedTemplate(
+                                                candidateName, jobTitle, companyName, score, dashboardUrl);
+                        } else {
+                                subject = "Update on your job application";
+                                dashboardUrl = frontEndUrl;
+                                html = HtmlTemplateUtil.applicationNotShortlistedTemplate(
+                                                candidateName, jobTitle, companyName, dashboardUrl);
+                        }
+                        sendEmail(toEmail, subject, html, "Recruitment Platform");
+                } catch (Exception e) {
+                        log.warn("Failed to send shortlist notification email to {}: {}", toEmail, e.getMessage());
+                }
         }
 
         public void sendContactEmail(ContactRequest request) throws Exception {

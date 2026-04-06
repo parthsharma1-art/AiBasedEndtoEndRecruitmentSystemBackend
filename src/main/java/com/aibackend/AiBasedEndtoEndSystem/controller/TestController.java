@@ -19,10 +19,10 @@ public class TestController {
     @Autowired
     private CronJobService cronJobService;
 
-    @PostMapping
-    public List<ShortlistEvaluationResult> evaluateShortlistForAllJobApplications() {
-        log.info("Starting the cron job work for shortlisting");
-        return cronJobService.evaluateShortlistForAllJobApplications();
-    }
+    // @PostMapping
+    // public List<ShortlistEvaluationResult> evaluateShortlistForAllJobApplications() {
+    //     log.info("Starting the cron job work for shortlisting");
+    //     // return cronJobService.evaluateShortlistForAllJobApplications();
+    // }
 
 }

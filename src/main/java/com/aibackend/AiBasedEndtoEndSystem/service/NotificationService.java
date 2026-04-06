@@ -125,4 +125,34 @@ public class NotificationService {
         notification.setSource(Chat.Source.CANDIDATE);
         saveNotification(notification);
     }
+
+    public void createAiScreeningResultNotification(
+            Candidate candidate,
+            JobPostings job,
+            boolean shortlisted,
+            String jobApplicationId) {
+        if (candidate == null || job == null) {
+            return;
+        }
+        String jobTitle = job.getTitle() != null && !job.getTitle().isBlank() ? job.getTitle() : "this role";
+        Notification notification = new Notification();
+        notification.setId(uniqueUtility.getNextNumber("NOTIFICATION", "notification"));
+        notification.setCreatedAt(Instant.now());
+        notification.setReceiverId(candidate.getId());
+        notification.setCandidateId(candidate.getId());
+        notification.setRelativeId(jobApplicationId != null && !jobApplicationId.isBlank() ? jobApplicationId : job.getId());
+        notification.setSource(Chat.Source.CANDIDATE);
+        notification.setRead(Boolean.FALSE);
+        if (shortlisted) {
+            notification.setTitle("AI screening — Under review");
+            notification.setMessage(
+                    "Your application for \"" + jobTitle + "\" passed AI screening and is now under recruiter review.");
+        } else {
+            notification.setTitle("Application update");
+            notification.setMessage(
+                    "Your application for \"" + jobTitle + "\" did not pass AI screening for this role.");
+        }
+        saveNotification(notification);
+        log.info("AI screening notification saved for candidate {} jobApplication {}", candidate.getId(), jobApplicationId);
+    }
 }
