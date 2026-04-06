@@ -3,23 +3,27 @@ package com.aibackend.AiBasedEndtoEndSystem.service;
 import java.time.Instant;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import com.aibackend.AiBasedEndtoEndSystem.entity.ShortlistEvaluationResult;
 import com.aibackend.AiBasedEndtoEndSystem.repository.ShortlistEvaluationResultRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
 public class ShortlistEvaluationResultService {
 
-    private final ShortlistEvaluationResultRepository repository;
-    private final ObjectMapper objectMapper;
-    private final JobApplicationService jobApplicationService;
+    @Autowired
+    private  ShortlistEvaluationResultRepository repository;
+    @Autowired
+    private ObjectMapper objectMapper;
+    @Autowired
+    @Lazy
+    private JobApplicationService jobApplicationService;
 
     public ShortlistEvaluationResult getShortlistEvaluationForJobApplication(String jobApplicationID) {
         log.info("Get Shortlist Evaluation for Job Application :{}", jobApplicationID);
