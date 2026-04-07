@@ -209,7 +209,7 @@ public class JobApplicationService {
     }
 
     public List<JobApplications> getApplicationsForProcessing() {
-        Instant cutoffTime = Instant.now().minus(7, ChronoUnit.MINUTES);
+        Instant cutoffTime = Instant.now().minus(1, ChronoUnit.MINUTES);
         return repository.findByStatusAndCreatedAtBefore(
                 JobApplications.JobStatus.UNDER_REVIEW,
                 cutoffTime);
