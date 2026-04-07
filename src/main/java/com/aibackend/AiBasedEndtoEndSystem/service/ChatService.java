@@ -117,7 +117,7 @@ public class ChatService {
         if (ObjectUtils.isEmpty(chatList)) {
             log.info("Chat not found :{}", user);
         }
-        log.info("Chat response:{}", chatList);
+        log.info("Chat response size:{}", chatList.size());
         List<ChatResponse> chatResponses = new ArrayList<>();
         for (Chat chat : chatList) {
             chatResponses.add(toChatResponse(chat));
@@ -135,7 +135,7 @@ public class ChatService {
 
 
     private ChatResponse toChatResponse(Chat chat) {
-        log.info("Converting to Chat response :{}", chat);
+        log.info("Converting to Chat response :{}", chat.getId());
         ChatResponse chatResponse = new ChatResponse();
         Candidate candidate = candidateService.getCandidateById(chat.getCandidateId());
         Recruiter recruiter = recruiterService.getRecruiterById(chat.getRecruiterId());
@@ -150,7 +150,6 @@ public class ChatService {
         List<Chat.ChatData> response = new ArrayList<>();
         for (Chat.ChatData chatData : chat.getChatData()) {
             String decrypt = safeDecrypt(chatData.getMessage());
-            log.info("Decrypted message :{}", decrypt);
             Chat.ChatData data = new Chat.ChatData();
             data.setMessageId(chatData.getMessageId());
             data.setMessage(decrypt);
@@ -165,7 +164,7 @@ public class ChatService {
         chatResponse.setChat(chat1);
         chatResponse.setCandidateResponse(toCandidateRespone(candidate));
         chatResponse.setRecruiterResponse(toRecruiterResponse(recruiter));
-        log.info("return response to the user :{}", chatResponse);
+        log.info("return response to the user :{}", chatResponse.getChatId());
         return chatResponse;
     }
 

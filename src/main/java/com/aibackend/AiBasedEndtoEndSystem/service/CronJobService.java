@@ -1,11 +1,7 @@
 package com.aibackend.AiBasedEndtoEndSystem.service;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -13,8 +9,6 @@ import org.springframework.stereotype.Service;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications.AIShortlistStatus;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications.JobStatus;
-import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
-import com.aibackend.AiBasedEndtoEndSystem.entity.ShortlistEvaluationResult;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
