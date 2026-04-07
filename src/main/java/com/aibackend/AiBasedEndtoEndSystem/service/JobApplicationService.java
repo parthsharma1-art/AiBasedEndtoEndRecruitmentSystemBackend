@@ -241,13 +241,17 @@ public class JobApplicationService {
             response.setCandidateEmail(jobApplications.getCandidateEmail());
             response.setAppliedAt(jobApplications.getAppliedAt());
             JobPostings jobPostings = jobPostingService.getJobPostingById(jobApplications.getJobId());
+            CompanyProfile companyProfile = companyProfileService.getCompanyProfileById(jobPostings.getCompanyId());
+            if (ObjectUtils.isEmpty(companyProfile)) {
+                throw new BadException("Company profile not found for the id " + jobPostings.getCompanyId());
+            }
             response.setJobId(jobApplications.getJobId());
             response.setResumeId(jobApplications.getResumeId());
             response.setJobProfile(jobPostings.getProfile());
             response.setJobType(jobPostings.getJobType());
             response.setTitle(jobPostings.getTitle());
             response.setSalaryRange(jobPostings.getSalaryRange());
-            response.setCompanyName(jobPostings.getCompanyId());
+            response.setCompanyName(companyProfile.getBasicSetting().getCompanyName() != null ? companyProfile.getBasicSetting().getCompanyName() : "");
             response.setCandidateMobileNumber(jobApplications.getMobileNumber());
             response.setJobStatus(jobApplications.getStatus());
             list.add(response);
