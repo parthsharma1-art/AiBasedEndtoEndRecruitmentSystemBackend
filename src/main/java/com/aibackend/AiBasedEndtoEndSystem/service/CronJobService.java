@@ -3,8 +3,10 @@ package com.aibackend.AiBasedEndtoEndSystem.service;
 import java.time.Instant;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications.AIShortlistStatus;
@@ -19,6 +21,10 @@ import lombok.extern.slf4j.Slf4j;
 public class CronJobService {
 
     private final JobApplicationService jobApplicationService;
+    private final RestTemplate restTemplate;
+
+    @Value("${ai-service.base-url}")
+    private String aiServiceBaseUrl;
 
     @Scheduled(cron = "${cron.job.time:0 0 */14 * * *}")
     public void sendScheduledMessages() {
@@ -50,6 +56,17 @@ public class CronJobService {
                     results.size());
         } catch (Exception e) {
             log.error("scheduledShortlistEvaluationNotificationsAndStatusUpdates failed", e);
+        }
+    }
+
+    @Scheduled(cron = "${cron.job.aiServiceKeepAlive.time:0 */4 * * * *}")
+    public void keepAiServiceAlive() {
+        try {
+            log.info("AI service keep-alive ping sent to {}", aiServiceBaseUrl);
+            restTemplate.getForEntity(aiServiceBaseUrl, String.class);
+            log.info("AI service keep-alive ping sent successfully to {}", aiServiceBaseUrl);
+        } catch (Exception e) {
+            log.warn("AI service keep-alive ping failed for {}", aiServiceBaseUrl, e);
         }
     }
 
