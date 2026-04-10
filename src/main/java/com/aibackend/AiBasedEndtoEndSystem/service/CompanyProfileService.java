@@ -1,8 +1,23 @@
 package com.aibackend.AiBasedEndtoEndSystem.service;
 
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Service;
+import org.springframework.util.ObjectUtils;
+import org.springframework.web.multipart.MultipartFile;
+
 import com.aibackend.AiBasedEndtoEndSystem.controller.CompanyProfileController;
-import com.aibackend.AiBasedEndtoEndSystem.controller.CompanyProfileController.CompanyProfileResponse;
 import com.aibackend.AiBasedEndtoEndSystem.controller.CompanyProfileController.CompanyProfileRequest;
+import com.aibackend.AiBasedEndtoEndSystem.controller.CompanyProfileController.CompanyProfileResponse;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.CompanyProfile;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
@@ -10,16 +25,8 @@ import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
 import com.aibackend.AiBasedEndtoEndSystem.repository.CompanyProfileRepository;
 import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtility;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.security.core.parameters.P;
-import org.springframework.stereotype.Service;
-import org.springframework.util.ObjectUtils;
 
-import java.time.Instant;
-import java.util.*;
-import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
@@ -34,6 +41,8 @@ public class CompanyProfileService {
     @Autowired
     @Lazy
     private JobPostingService jobPostingService;
+    @Autowired
+    private FileStorageService fileStorageService;
 
     public CompanyProfileResponse createCompanyProfileByRecruiter(Recruiter recruiter) {
         log.info("Creating new company profile for recruiter id :{}", recruiter.getId());
@@ -54,7 +63,7 @@ public class CompanyProfileService {
         return toResponse(profile);
     }
 
-    public CompanyProfileResponse updateCompanyProfile(CompanyProfileRequest request, UserDTO user) {
+    public CompanyProfileResponse updateCompanyProfile(CompanyProfileRequest request, UserDTO user, MultipartFile companyLogo) {
         log.info("Updating profile for the user :{}", user);
         Optional<CompanyProfile> existCompanyProfile = repository.getCompanyProfileByRecruiterId(user.getId());
         if (existCompanyProfile.isEmpty()) {
@@ -79,9 +88,19 @@ public class CompanyProfileService {
             companyProfile.setContactDetails(request.getContactDetails());
             hasChanges = true;
         }
+        if (companyLogo != null && !companyLogo.isEmpty()) {
+            if (!ObjectUtils.isEmpty(companyProfile.getCompanyLogoId())) {
+                log.info("Deleting the company logo");
+                fileStorageService.deleteFile(companyProfile.getCompanyLogoId());
+            }
+            String companyLogoId = fileStorageService.storeFile(companyLogo);
+            companyProfile.setCompanyLogoId(companyLogoId);
+            hasChanges = true;
+        }
         if (hasChanges) {
             companyProfile = save(companyProfile);
         }
+
         return toResponse(companyProfile);
     }
 
@@ -100,6 +119,7 @@ public class CompanyProfileService {
         response.setRecruiterId(companyProfile.getRecruiterId());
         response.setCreatedAt(companyProfile.getCreatedAt());
         response.setCreatedBy(companyProfile.getCreatedBy());
+        response.setCompanyLogoId(companyProfile.getCompanyLogoId());
         return response;
     }
 
@@ -114,7 +134,14 @@ public class CompanyProfileService {
             log.error("Unauthorize access to the Company profile :{}", companyProfile.getId());
             throw new BadException("Unauthorize access to the Company profile " + user.getId());
         }
-        return toResponse(companyProfile);
+        Recruiter recruiter = recruiterService.getRecruiterById(user.getId());
+        CompanyProfileResponse response = toResponse(companyProfile);
+        if (!ObjectUtils.isEmpty(recruiter)) {
+            response.setRecruiterProfileImageId(recruiter.getProfileImageId());
+        }else{
+            response.setRecruiterProfileImageId(null);
+        }
+        return response;
     }
 
     public CompanyProfileResponse getDetailsByCompanyDomain(String domain) {
