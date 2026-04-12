@@ -151,7 +151,8 @@ public class JobApplicationService {
         application = saveJobApplication(application);
         log.info("Saved Job applications :{}", application);
 
-        if (!ObjectUtils.isEmpty(application.getResumeId()) && !application.getResumeId().isBlank() && jobPostings.isAssessmentRequired()) {
+        if (!ObjectUtils.isEmpty(application.getResumeId()) && !application.getResumeId().isBlank()
+                && jobPostings.isAssessmentRequired()) {
             aiResumeEvaluatingService.sendJobPostingAndResumeToShortlistEvaluate(
                     jobPostings,
                     application.getResumeId(),
@@ -251,8 +252,10 @@ public class JobApplicationService {
             response.setJobProfile(jobPostings.getProfile());
             response.setJobType(jobPostings.getJobType());
             response.setTitle(jobPostings.getTitle());
-            response.setSalaryRange(jobPostings.getSalaryRange());
-            response.setCompanyName(companyProfile.getBasicSetting().getCompanyName() != null ? companyProfile.getBasicSetting().getCompanyName() : "");
+            response.setSalaryRange(JobPostingService.buildSalaryRangeDisplay(jobPostings));
+            response.setCompanyName(companyProfile.getBasicSetting().getCompanyName() != null
+                    ? companyProfile.getBasicSetting().getCompanyName()
+                    : "");
             response.setCandidateMobileNumber(jobApplications.getMobileNumber());
             response.setJobStatus(jobApplications.getStatus());
             list.add(response);
@@ -480,7 +483,15 @@ public class JobApplicationService {
 
         // Auto-finalize application from test score:
         // 50% or above -> selected (HIRED), below 50% -> REJECTED.
-        if (scorePercent >= 50.0) {
+        JobPostings job = jobPostingService.getJobPostingById(jobApplications.getJobId());
+        double shortlistPercentage = 0;
+        if (ObjectUtils.isEmpty(job) || ObjectUtils.isEmpty(job.getShortlistPercentage()) || job.getShortlistPercentage().doubleValue() == 0) {
+            log.error("Job not found for the id " + jobApplications.getJobId());
+            shortlistPercentage = 60.0;
+        } else {
+            shortlistPercentage = job.getShortlistPercentage().doubleValue();
+        }
+        if (scorePercent >= shortlistPercentage) {
             jobApplications.setStatus(JobApplications.JobStatus.INTERVIEW_SCHEDULED);
             jobApplications.setAiShortlistStatus(JobApplications.AIShortlistStatus.SHORTLISTED);
         } else {
@@ -665,7 +676,7 @@ public class JobApplicationService {
         }
         req.setProfile(job.getProfile());
         req.setJobType(job.getJobType() != null ? job.getJobType().name() : null);
-        req.setSalaryRange(job.getSalaryRange());
+        req.setSalaryRange(JobPostingService.buildSalaryRangeDisplay(job));
         return req;
     }
 
@@ -759,7 +770,6 @@ public class JobApplicationService {
                     candidate, job, shortlisted, application.getId());
         }
     }
-
 
     public List<JobApplications> getAllJobApplicationsDetailsByCandidateId(String candidateId) {
         List<JobApplications> jobApplications = repository.findByCandidateId(candidateId);

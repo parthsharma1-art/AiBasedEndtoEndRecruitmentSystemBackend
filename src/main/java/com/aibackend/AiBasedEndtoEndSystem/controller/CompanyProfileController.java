@@ -14,11 +14,15 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.CompanyProfile.BasicSetting;
 import com.aibackend.AiBasedEndtoEndSystem.entity.CompanyProfile.ContactDetails;
 import com.aibackend.AiBasedEndtoEndSystem.entity.CompanyProfile.SocialLinks;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
+import com.aibackend.AiBasedEndtoEndSystem.entity.SalaryRangeLpa;
+import com.aibackend.AiBasedEndtoEndSystem.jackson.SalaryRangeLpaDeserializer;
 import com.aibackend.AiBasedEndtoEndSystem.service.CompanyProfileService;
 import com.aibackend.AiBasedEndtoEndSystem.service.JobPostingService;
 import com.aibackend.AiBasedEndtoEndSystem.util.SecurityUtils;
@@ -83,13 +87,17 @@ public class CompanyProfileController {
         private String title;
         private String description;
         private List<String> skillsRequired;
-        private String salaryRange;
         private JobPostings.JobType jobType;
         private Integer experienceRequired;
         private List<String> locations;
         private String profile;
         private Boolean isAssessmentRequired;
         private Boolean isInterviewRequired;
+        private Double shortlistPercentage;
+        private String salaryRange;
+        @JsonDeserialize(using = SalaryRangeLpaDeserializer.class)
+        private SalaryRangeLpa salaryRangeInLPA;
+        private String currency;
     }
 
     @Data
@@ -98,7 +106,9 @@ public class CompanyProfileController {
         private String title;
         private String description;
         private List<String> skillsRequired;
+        private Double shortlistPercentage;
         private String salaryRange;
+        private SalaryRangeLpa salaryRangeInLPA;
         private JobPostings.JobType jobType;
         private Integer experienceRequired;
         private String postBy;
@@ -109,12 +119,15 @@ public class CompanyProfileController {
         private List<String> locations;
         private boolean isAssessmentRequired;
         private boolean isInterviewRequired;
+        private String currency;
         public JobPostingsResponse(JobPostings job) {
             this.id = job.getId();
             this.title = job.getTitle();
             this.description = job.getDescription();
             this.skillsRequired = job.getSkillsRequired();
-            this.salaryRange = job.getSalaryRange();
+            this.shortlistPercentage = job.getShortlistPercentage();
+            this.salaryRangeInLPA = job.getSalaryRangeInLPA();
+            this.salaryRange = JobPostingService.buildSalaryRangeDisplay(job);
             this.jobType = job.getJobType();
             this.experienceRequired = job.getExperienceRequired();
             this.postBy = job.getPostBy();
@@ -125,6 +138,7 @@ public class CompanyProfileController {
             this.locations = job.getLocations();
             this.isAssessmentRequired = job.isAssessmentRequired();
             this.isInterviewRequired = job.isInterviewRequired();
+            this.currency = job.getCurrency();
         }
     }
 
