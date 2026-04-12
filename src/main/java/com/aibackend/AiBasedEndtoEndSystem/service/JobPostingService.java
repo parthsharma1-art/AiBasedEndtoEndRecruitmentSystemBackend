@@ -22,6 +22,7 @@ import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplicationGeneratedTest;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
+import com.aibackend.AiBasedEndtoEndSystem.entity.SalaryRangeLpa;
 import com.aibackend.AiBasedEndtoEndSystem.entity.ShortlistEvaluationResult;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
 import com.aibackend.AiBasedEndtoEndSystem.repository.JobApplicationRepository;
@@ -99,10 +100,46 @@ public class JobPostingService {
         job.setProfile(request.getProfile());
         job.setSkillsRequired(request.getSkillsRequired());
         job.setExperienceRequired(request.getExperienceRequired());
-        job.setSalaryRange(request.getSalaryRange());
+        job.setSalaryRangeInLPA(request.getSalaryRangeInLPA());
+        job.setShortlistPercentage(request.getShortlistPercentage());
+        job.setCurrency(request.getCurrency());
         job.setLocations(request.getLocations());
         job.setAssessmentRequired(request.getIsAssessmentRequired());
         job.setInterviewRequired(request.getIsInterviewRequired());
+    }
+
+    public static String buildSalaryRangeDisplay(JobPostings job) {
+        if (job == null) {
+            return null;
+        }
+        String legacy = job.getSalaryRange();
+        if (legacy != null && !legacy.isBlank()) {
+            return legacy.trim();
+        }
+        return formatSalaryRangeInLpa(job.getSalaryRangeInLPA(), job.getCurrency());
+    }
+
+    private static String formatSalaryRangeInLpa(SalaryRangeLpa range, String currency) {
+        if (range == null) {
+            return null;
+        }
+        Integer lo = range.getMin();
+        Integer hi = range.getMax();
+        if (lo == null && hi == null) {
+            return null;
+        }
+        String core;
+        if (lo != null && hi != null) {
+            core = lo + "-" + hi + " LPA";
+        } else if (hi != null) {
+            core = "up to " + hi + " LPA";
+        } else {
+            core = lo + "+ LPA";
+        }
+        if (currency != null && !currency.isBlank()) {
+            return currency.trim() + " " + core;
+        }
+        return core;
     }
 
     public List<JobPostings> getAllJobPostings(Recruiter recruiter) {

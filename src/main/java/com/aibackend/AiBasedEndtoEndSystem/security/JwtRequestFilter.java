@@ -98,12 +98,23 @@
 
 package com.aibackend.AiBasedEndtoEndSystem.security;
 
+import java.io.IOException;
+import java.util.List;
+
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Candidate;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
 import com.aibackend.AiBasedEndtoEndSystem.entity.User;
 import com.aibackend.AiBasedEndtoEndSystem.service.MyUserDetailsService;
 import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
@@ -111,14 +122,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
-import org.springframework.stereotype.Component;
-import org.springframework.web.filter.OncePerRequestFilter;
-
-import java.io.IOException;
-import java.util.Collections;
 
 @Component
 @Slf4j
@@ -177,7 +180,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                             new UsernamePasswordAuthenticationToken(
                                     userDTO,
                                     null,
-                                    Collections.emptyList()
+                                    List.of(new SimpleGrantedAuthority(role))
                             );
 
                     authentication.setDetails(
