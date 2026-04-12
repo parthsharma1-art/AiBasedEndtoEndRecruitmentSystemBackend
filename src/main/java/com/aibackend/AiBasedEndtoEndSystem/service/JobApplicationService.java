@@ -25,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.aibackend.AiBasedEndtoEndSystem.controller.CandidateApplyJobController;
 import com.aibackend.AiBasedEndtoEndSystem.controller.CompanyProfileController;
 import com.aibackend.AiBasedEndtoEndSystem.controller.JobPostingController;
+import com.aibackend.AiBasedEndtoEndSystem.dto.CandidateDashboardResponse;
 import com.aibackend.AiBasedEndtoEndSystem.dto.AiGeneratedTestPayload;
 import com.aibackend.AiBasedEndtoEndSystem.dto.CodingQuestion;
 import com.aibackend.AiBasedEndtoEndSystem.dto.CodingQuestionSafeResponse;
@@ -150,7 +151,7 @@ public class JobApplicationService {
         application = saveJobApplication(application);
         log.info("Saved Job applications :{}", application);
 
-        if (!ObjectUtils.isEmpty(application.getResumeId()) && !application.getResumeId().isBlank()) {
+        if (!ObjectUtils.isEmpty(application.getResumeId()) && !application.getResumeId().isBlank() && jobPostings.isAssessmentRequired()) {
             aiResumeEvaluatingService.sendJobPostingAndResumeToShortlistEvaluate(
                     jobPostings,
                     application.getResumeId(),
@@ -229,7 +230,7 @@ public class JobApplicationService {
         return response;
     }
 
-    public List<CandidateApplyJobController.CandidateAppliedJobResponse> getAllAppliedJobsforCandidate(
+    public List<CandidateApplyJobController.CandidateAppliedJobResponse> getAllAppliedJobsForCandidate(
             Candidate candidate) {
         log.info("Get all applied jobs for the candidate :{}", candidate.getId());
         List<JobApplications> applications = repository.findByCandidateId(candidate.getId());
@@ -329,6 +330,20 @@ public class JobApplicationService {
         if (ObjectUtils.isEmpty(job)) {
             throw new BadException("Job not found for the id " + jobApplications.getJobId());
         }
+
+        Optional<JobApplicationGeneratedTest> existingGenerated = jobApplicationGeneratedTestRepository
+                .findByJobApplicationId(jobApplicationId);
+        if (existingGenerated.isPresent() && hasGeneratedTestContent(existingGenerated.get())) {
+            JobApplicationGeneratedTest doc = existingGenerated.get();
+            log.info(
+                    "Reusing existing generated test id={} for jobApplicationId={} (mcqs={}, coding={})",
+                    doc.getId(),
+                    jobApplicationId,
+                    doc.getMcqs() != null ? doc.getMcqs().size() : 0,
+                    doc.getCodingQuestions() != null ? doc.getCodingQuestions().size() : 0);
+            return toSafeResponse(toStartTestResultResponse(doc));
+        }
+
         JobPostingTestRequest body = toJobPostingTestRequest(job);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -464,11 +479,13 @@ public class JobApplicationService {
         double scorePercent = totalQuestions == 0 ? 0.0 : (totalCorrect * 100.0) / totalQuestions;
 
         // Auto-finalize application from test score:
-        // 60% or above -> selected (HIRED), below 60% -> REJECTED.
+        // 50% or above -> selected (HIRED), below 50% -> REJECTED.
         if (scorePercent >= 50.0) {
-            jobApplications.setStatus(JobApplications.JobStatus.SHORTLISTED);
+            jobApplications.setStatus(JobApplications.JobStatus.INTERVIEW_SCHEDULED);
+            jobApplications.setAiShortlistStatus(JobApplications.AIShortlistStatus.SHORTLISTED);
         } else {
             jobApplications.setStatus(JobApplications.JobStatus.REJECTED);
+            jobApplications.setAiShortlistStatus(JobApplications.AIShortlistStatus.REJECTED);
         }
         jobApplications.setUpdatedAt(Instant.now());
         jobApplications.setUpdatedBy(candidate.getId());
@@ -616,6 +633,15 @@ public class JobApplicationService {
                 codingList);
     }
 
+    private static boolean hasGeneratedTestContent(JobApplicationGeneratedTest doc) {
+        if (doc == null) {
+            return false;
+        }
+        boolean hasMcq = doc.getMcqs() != null && !doc.getMcqs().isEmpty();
+        boolean hasCoding = doc.getCodingQuestions() != null && !doc.getCodingQuestions().isEmpty();
+        return hasMcq || hasCoding;
+    }
+
     private static StartTestResultResponse toStartTestResultResponse(JobApplicationGeneratedTest doc) {
         return new StartTestResultResponse(
                 doc.getId(),
@@ -643,7 +669,7 @@ public class JobApplicationService {
         return req;
     }
 
-    public Boolean rejectJobApplication(UserDTO userDTO, String jobApplicationId) {
+    public Boolean rejectJobApplication(UserDTO userDTO, String jobApplicationId, String reason) {
         log.info("Reject job application {} for user {}", jobApplicationId, userDTO != null ? userDTO.getId() : null);
         if (ObjectUtils.isEmpty(userDTO) || ObjectUtils.isEmpty(userDTO.getId())) {
             throw new BadException("User is required");
@@ -661,6 +687,8 @@ public class JobApplicationService {
             throw new BadException("Job not found for the id " + application.getJobId());
         }
         application.setStatus(JobApplications.JobStatus.REJECTED);
+        application.setAiShortlistStatus(JobApplications.AIShortlistStatus.REJECTED);
+        application.setRejectReason(reason);
         application.setUpdatedAt(Instant.now());
         application.setUpdatedBy(candidate.getId());
         saveJobApplication(application);
@@ -730,6 +758,27 @@ public class JobApplicationService {
             notificationService.createAiScreeningResultNotification(
                     candidate, job, shortlisted, application.getId());
         }
+    }
+
+
+    public List<JobApplications> getAllJobApplicationsDetailsByCandidateId(String candidateId) {
+        List<JobApplications> jobApplications = repository.findByCandidateId(candidateId);
+        if (jobApplications.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return jobApplications;
+    }
+
+    public CandidateDashboardResponse.ApplicationSummary buildApplicationSummary(String candidateId) {
+        List<JobApplications> apps = repository.findByCandidateId(candidateId);
+        CandidateDashboardResponse.ApplicationSummary summary = new CandidateDashboardResponse.ApplicationSummary();
+        summary.setTotalApplications(apps.size());
+        summary.setShortlisted((int) apps.stream().filter(a -> a.getStatus() == JobStatus.SHORTLISTED).count());
+        summary.setUnderReview((int) apps.stream().filter(a -> a.getStatus() == JobStatus.UNDER_REVIEW).count());
+        summary.setRejected((int) apps.stream().filter(a -> a.getStatus() == JobStatus.REJECTED).count());
+        summary.setApplied((int) apps.stream().filter(a -> a.getStatus() == JobStatus.APPLIED).count());
+        summary.setTestScheduled((int) apps.stream().filter(a -> a.getStatus() == JobStatus.TEST_SCHEDULED).count());
+        return summary;
     }
 
 }

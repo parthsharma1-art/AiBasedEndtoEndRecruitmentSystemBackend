@@ -8,9 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
@@ -80,16 +78,6 @@ public class CompanyProfileController {
         return jobPostingService.getAllInactiveJobs(user);
     }
 
-    @PostMapping("/job/post")
-    public JobPostingsResponse createJob(@RequestBody JobPostingsRequest request) {
-        log.info("The job posting request is :{}", request);
-        UserDTO user = SecurityUtils.getLoggedInUser();
-        if (user == null)
-            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
-        log.info("Logged In user: {}", user);
-        return companyProfileService.createJobPosting(user, request);
-    }
-
     @Data
     public static class JobPostingsRequest {
         private String title;
@@ -98,7 +86,10 @@ public class CompanyProfileController {
         private String salaryRange;
         private JobPostings.JobType jobType;
         private Integer experienceRequired;
+        private List<String> locations;
         private String profile;
+        private Boolean isAssessmentRequired;
+        private Boolean isInterviewRequired;
     }
 
     @Data
@@ -115,7 +106,9 @@ public class CompanyProfileController {
         private Instant createdAt;
         private boolean isActive;
         private String profile;
-
+        private List<String> locations;
+        private boolean isAssessmentRequired;
+        private boolean isInterviewRequired;
         public JobPostingsResponse(JobPostings job) {
             this.id = job.getId();
             this.title = job.getTitle();
@@ -129,6 +122,9 @@ public class CompanyProfileController {
             this.createdAt = job.getCreatedAt();
             this.isActive = job.isActive();
             this.profile = job.getProfile();
+            this.locations = job.getLocations();
+            this.isAssessmentRequired = job.isAssessmentRequired();
+            this.isInterviewRequired = job.isInterviewRequired();
         }
     }
 

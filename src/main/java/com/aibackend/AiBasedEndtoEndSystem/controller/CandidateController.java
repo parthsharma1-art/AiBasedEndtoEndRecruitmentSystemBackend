@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.aibackend.AiBasedEndtoEndSystem.config.AuthAppConfig;
+import com.aibackend.AiBasedEndtoEndSystem.dto.CandidateDashboardResponse;
 import com.aibackend.AiBasedEndtoEndSystem.dto.CandidateRequest;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Candidate;
@@ -75,6 +76,15 @@ public class CandidateController {
         if (user == null)
             throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
         return toCandidateRespone(candidateService.findById(user.getId()));
+    }
+
+    @GetMapping("/dashboard")
+    public CandidateDashboardResponse getCandidateDashboard() {
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null) {
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        }
+        return candidateService.getCandidateDashboard(user);
     }
 
     public CandidateResponse toCandidateRespone(Candidate candidate) {

@@ -49,6 +49,25 @@ public class JobPostingService {
     @Lazy
     private final CompanyProfileService companyProfileService;
 
+    public CompanyProfileController.JobPostingsResponse createJobPosting(UserDTO user,
+            CompanyProfileController.JobPostingsRequest request) {
+        log.info("Creating job for the recruiter :{}", user);
+        CompanyProfile companyProfile = companyProfileService.getCompanyProfileByRecruiterId(user.getId());
+        if (ObjectUtils.isEmpty(companyProfile)) {
+            throw new BadException("Company Profile not found for the user " + user.getId());
+        }
+        if (!companyProfile.getRecruiterId().equals(user.getId())) {
+            log.error("Unauthorize HR access to the Company profile :{}", companyProfile.getId());
+            throw new BadException("Unauthorize access to the Company profile " + user.getId());
+        }
+        if (ObjectUtils.isEmpty(companyProfile.getBasicSetting())) {
+            throw new BadException("Basic Settings are required Before Posting jobs");
+        }
+        log.info("Request coming from frontend :{}", request);
+        JobPostings jopPosting = createJob(request, companyProfile);
+        return new CompanyProfileController.JobPostingsResponse(jopPosting);
+    }
+
     public JobPostings createJob(
             CompanyProfileController.JobPostingsRequest request,
             CompanyProfile companyProfile) {
@@ -63,6 +82,7 @@ public class JobPostingService {
         job.setUpdatedAt(now);
         job.setCreatedBy(companyProfile.getRecruiterId());
         job.setUpdatedBy(companyProfile.getRecruiterId());
+        job.setLocations(request.getLocations());
         applyRequestToJob(job, request);
         return save(job);
     }
@@ -80,6 +100,9 @@ public class JobPostingService {
         job.setSkillsRequired(request.getSkillsRequired());
         job.setExperienceRequired(request.getExperienceRequired());
         job.setSalaryRange(request.getSalaryRange());
+        job.setLocations(request.getLocations());
+        job.setAssessmentRequired(request.getIsAssessmentRequired());
+        job.setInterviewRequired(request.getIsInterviewRequired());
     }
 
     public List<JobPostings> getAllJobPostings(Recruiter recruiter) {
@@ -151,6 +174,39 @@ public class JobPostingService {
             responses.add(response);
         }
 
+        return responses;
+    }
+
+    public List<PublicJobResponse> getActiveJobsNotAppliedByCandidate(String candidateId) {
+        log.info("Fetching active jobs not applied by candidate: {}", candidateId);
+        Set<String> appliedJobIds = jobApplicationRepository.findByCandidateId(candidateId).stream()
+                .map(JobApplications::getJobId)
+                .collect(Collectors.toSet());
+        List<JobPostings> jobs = repository.findByIsActiveTrue(Boolean.TRUE);
+        if (jobs.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<JobPostings> notApplied = jobs.stream()
+                .filter(j -> !appliedJobIds.contains(j.getId()))
+                .collect(Collectors.toList());
+        if (notApplied.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Set<String> companyIds = notApplied.stream()
+                .map(JobPostings::getCompanyId)
+                .collect(Collectors.toSet());
+        Map<String, CompanyProfile> companyMap = companyProfileService.getCompanyProfilesByIds(companyIds);
+        List<PublicJobResponse> responses = new ArrayList<>();
+        for (JobPostings job : notApplied) {
+            CompanyProfile profile = companyMap.get(job.getCompanyId());
+            if (profile == null || ObjectUtils.isEmpty(profile.getBasicSetting())) {
+                log.warn("Company not found for id: {}", job.getCompanyId());
+                continue;
+            }
+            PublicJobResponse response = getJobResponse(job, profile);
+            response.setTotalAppliedCandidates(jobApplicationService.totalJobAppliedCandidate(job.getId()));
+            responses.add(response);
+        }
         return responses;
     }
 

@@ -18,8 +18,12 @@ public class JobPostings {
     private String salaryRange;
     private JobType jobType;
     private Integer experienceRequired;
-    private  String profile;
-    private String postBy;   // recruiter Id
+    private String profile;
+    private List<String> locations;
+    private String postBy;
+    private boolean isAssessmentRequired = true;
+    private boolean isInterviewRequired = false;
+
     private String companyId;
     private Instant createdAt;
     private String createdBy;
@@ -27,8 +31,7 @@ public class JobPostings {
     private String updatedBy;
     private boolean isActive;
 
-
     public enum JobType {
-        REMOTE, HYBRID, ONSITE,FULL_TIME,INTERNSHIP
+        REMOTE, HYBRID, ONSITE, FULL_TIME, INTERNSHIP
     }
 }

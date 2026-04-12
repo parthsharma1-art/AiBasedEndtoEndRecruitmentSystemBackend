@@ -19,6 +19,7 @@ public class JobApplications {
     private String recruiterId;
     private String companyId;
     private String companyName;
+    private String rejectReason;
     private JobStatus status;
     private Instant appliedAt;
     private String resumeId;

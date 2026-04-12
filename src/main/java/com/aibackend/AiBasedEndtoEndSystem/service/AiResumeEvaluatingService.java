@@ -28,7 +28,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -52,6 +51,7 @@ public class AiResumeEvaluatingService {
             String resumeId,
             String candidateId,
             String jobApplicationId) {
+        log.info("Sending job posting and resume to shortlist evaluate for jobApplicationId={}", jobApplicationId);
         if (resumeId == null || resumeId.isBlank()) {
             log.warn("Skipping shortlist evaluate: resumeId missing for jobApplicationId={}", jobApplicationId);
             return Optional.empty();
@@ -127,8 +127,7 @@ public class AiResumeEvaluatingService {
             List<List<JobApplications>> chunks = partition(applications, BATCH_SIZE);
             for (List<JobApplications> chunk : chunks) {
                 try {
-                    List<ShortlistEvaluationResult> results =
-                            callBatchApi(job, chunk);
+                    List<ShortlistEvaluationResult> results = callBatchApi(job, chunk);
                     finalResults.addAll(results);
                 } catch (Exception e) {
                     log.error("Batch API failed for job {} chunk size {}",
@@ -138,6 +137,7 @@ public class AiResumeEvaluatingService {
         }
         return finalResults;
     }
+
     private List<ShortlistEvaluationResult> callBatchApi(
             JobPostings job,
             List<JobApplications> applications) throws IOException {
@@ -168,31 +168,27 @@ public class AiResumeEvaluatingService {
         }
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-        HttpEntity<MultiValueMap<String, Object>> request =
-                new HttpEntity<>(body, headers);
+        HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(body, headers);
         log.info("Calling batch API with {} resumes", applications.size());
-        ResponseEntity<String> response =
-                restTemplate.postForEntity(shortlistEvaluateBatchUrl, request, String.class);
+        ResponseEntity<String> response = restTemplate.postForEntity(shortlistEvaluateBatchUrl, request, String.class);
         String responseBody = response.getBody();
         if (responseBody == null || responseBody.isBlank()) {
             throw new RuntimeException("Empty response from batch API");
         }
         Map<String, Object> parsed = objectMapper.readValue(responseBody, Map.class);
-        List<Map<String, Object>> results =
-                (List<Map<String, Object>>) parsed.get("results");
+        List<Map<String, Object>> results = (List<Map<String, Object>>) parsed.get("results");
         List<ShortlistEvaluationResult> finalResults = new ArrayList<>();
         for (int i = 0; i < results.size(); i++) {
             Map<String, Object> item = results.get(i);
             String resultJson = objectMapper.writeValueAsString(item.get("result"));
-            ShortlistEvaluationResult saved =
-                    shortlistEvaluationResultService.persistShortlistEvaluationResult(
-                            resultJson,
-                            candidateIds.get(i),
-                            jobIds.get(i),
-                            appIds.get(i),
-                            resumeIds.get(i)
-                    ).orElse(null);
-            if (saved != null) finalResults.add(saved);
+            ShortlistEvaluationResult saved = shortlistEvaluationResultService.persistShortlistEvaluationResult(
+                    resultJson,
+                    candidateIds.get(i),
+                    jobIds.get(i),
+                    appIds.get(i),
+                    resumeIds.get(i)).orElse(null);
+            if (saved != null)
+                finalResults.add(saved);
         }
         return finalResults;
     }

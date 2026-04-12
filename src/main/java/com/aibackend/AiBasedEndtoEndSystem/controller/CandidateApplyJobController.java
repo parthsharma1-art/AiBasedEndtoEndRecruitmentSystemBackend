@@ -90,12 +90,12 @@ public class CandidateApplyJobController {
     }
 
     @PostMapping("/applied/{jobApplicationId}/reject")
-    public Boolean rejectCandidate(@PathVariable String jobApplicationId) {
+    public Boolean rejectCandidate(@PathVariable String jobApplicationId, @RequestBody CandidateRejectReasonRequest body) {
         UserDTO userDTO = SecurityUtils.getLoggedInUser();
         if (userDTO == null) {
             throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
         }
-        return jobApplicationService.rejectJobApplication(userDTO, jobApplicationId);
+        return jobApplicationService.rejectJobApplication(userDTO, jobApplicationId, body.getReason());
         
     }
 
@@ -122,5 +122,10 @@ public class CandidateApplyJobController {
         private JobPostings.JobType jobType;
         private String companyName;
         private JobApplications.JobStatus jobStatus;
+    }
+
+    @Data
+    public static class CandidateRejectReasonRequest {
+        private String reason;
     }
 }

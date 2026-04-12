@@ -8,7 +8,7 @@ import java.util.Optional;
 
 import com.aibackend.AiBasedEndtoEndSystem.controller.CandidateApplyJobController;
 import com.aibackend.AiBasedEndtoEndSystem.controller.RecruiterController;
-import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
+import com.aibackend.AiBasedEndtoEndSystem.dto.CandidateDashboardResponse;
 import com.aibackend.AiBasedEndtoEndSystem.util.PasswordUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -58,6 +58,9 @@ public class CandidateService {
     @Autowired
     @Lazy
     private JobApplicationService jobApplicationService;
+    @Autowired
+    @Lazy
+    private JobPostingService jobPostingService;
 
     public UserDTO createNewCandidate(CandidateRequest request, MultipartFile profileImage, MultipartFile resume) {
         log.info("Create new candidate :{}", request);
@@ -317,7 +320,20 @@ public class CandidateService {
         if (ObjectUtils.isEmpty(candidate)) {
             throw new BadException("Candidate not found for ID :" + user.getId());
         }
-        return jobApplicationService.getAllAppliedJobsforCandidate(candidate);
+        return jobApplicationService.getAllAppliedJobsForCandidate(candidate);
+    }
+
+    public CandidateDashboardResponse getCandidateDashboard(UserDTO user) {
+        log.info("Candidate dashboard for user :{}", user.getId());
+        Candidate candidate = getCandidateById(user.getId());
+        if (ObjectUtils.isEmpty(candidate)) {
+            throw new BadException("Candidate not found for ID :" + user.getId());
+        }
+        CandidateDashboardResponse response = new CandidateDashboardResponse();
+        response.setSummary(jobApplicationService.buildApplicationSummary(candidate.getId()));
+        response.setApplications(jobApplicationService.getAllAppliedJobsForCandidate(candidate));
+        response.setJobsNotApplied(jobPostingService.getActiveJobsNotAppliedByCandidate(candidate.getId()));
+        return response;
     }
 
     public Boolean updateCandidatePassword(UserDTO user, RecruiterController.UpdatePasswordRequest request) {

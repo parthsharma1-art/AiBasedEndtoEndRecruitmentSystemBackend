@@ -2,31 +2,34 @@ package com.aibackend.AiBasedEndtoEndSystem.controller;
 
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
-import com.aibackend.AiBasedEndtoEndSystem.dto.JobApplicationGeneratedTestDto;
-import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications;
-import com.aibackend.AiBasedEndtoEndSystem.entity.ShortlistEvaluationResult;
+import java.time.Instant;
+import java.util.List;
 
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
-import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+
+import com.aibackend.AiBasedEndtoEndSystem.controller.CompanyProfileController.JobPostingsRequest;
+import com.aibackend.AiBasedEndtoEndSystem.controller.CompanyProfileController.JobPostingsResponse;
+import com.aibackend.AiBasedEndtoEndSystem.dto.JobApplicationGeneratedTestDto;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
+import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications;
+import com.aibackend.AiBasedEndtoEndSystem.entity.ShortlistEvaluationResult;
 import com.aibackend.AiBasedEndtoEndSystem.service.CompanyProfileService;
 import com.aibackend.AiBasedEndtoEndSystem.service.JobPostingService;
 import com.aibackend.AiBasedEndtoEndSystem.util.SecurityUtils;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import java.time.Instant;
-import java.util.List;
 
 @RestController
 @RequestMapping("/profile/job")
@@ -36,6 +39,17 @@ public class JobPostingController {
     private JobPostingService jobPostingService;
     @Autowired
     private CompanyProfileService companyProfileService;
+
+
+    @PostMapping("/post")
+    public JobPostingsResponse createJob(@RequestBody JobPostingsRequest request) {
+        log.info("The job posting request is :{}", request);
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null)
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        log.info("Logged In user: {}", user);
+        return jobPostingService.createJobPosting(user, request);
+    }
 
     @DeleteMapping("/delete/{id}")
     public Boolean deleteById(@PathVariable String id) {
