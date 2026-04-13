@@ -25,6 +25,10 @@ import org.springframework.web.multipart.MultipartFile;
 import com.aibackend.AiBasedEndtoEndSystem.controller.CandidateApplyJobController;
 import com.aibackend.AiBasedEndtoEndSystem.controller.CompanyProfileController;
 import com.aibackend.AiBasedEndtoEndSystem.controller.JobPostingController;
+import com.aibackend.AiBasedEndtoEndSystem.dto.AiInterviewApiResponse;
+import com.aibackend.AiBasedEndtoEndSystem.dto.AiInterviewFullDetailDto;
+import com.aibackend.AiBasedEndtoEndSystem.dto.AiInterviewSummaryResponse;
+import com.aibackend.AiBasedEndtoEndSystem.dto.InterviewAnswerRequest;
 import com.aibackend.AiBasedEndtoEndSystem.dto.CandidateDashboardResponse;
 import com.aibackend.AiBasedEndtoEndSystem.dto.AiGeneratedTestPayload;
 import com.aibackend.AiBasedEndtoEndSystem.dto.CodingQuestion;
@@ -82,6 +86,8 @@ public class JobApplicationService {
     private JobApplicationGeneratedTestRepository jobApplicationGeneratedTestRepository;
     @Autowired
     private AiResumeEvaluatingService aiResumeEvaluatingService;
+    @Autowired
+    private AiInterviewService aiInterviewService;
     @Autowired
     private BrevoEmailService brevoEmailService;
 
@@ -305,8 +311,115 @@ public class JobApplicationService {
         if (ObjectUtils.isEmpty(job)) {
             throw new BadException("Job not found for the id " + application.getJobId());
         }
+        AiInterviewFullDetailDto aiInterview = aiInterviewService
+                .getInterviewFullDetailForJobApplicationOrNull(jobApplicationId);
         return new JobPostingController.ShortlistEvaluationWithJobResponse(
-                evaluation, new CompanyProfileController.JobPostingsResponse(job), null);
+                evaluation, new CompanyProfileController.JobPostingsResponse(job), null, aiInterview);
+    }
+
+    public AiInterviewApiResponse startInterviewForJobApplication(UserDTO user, String jobApplicationId) {
+        log.info("Start AI interview for job application {}", jobApplicationId);
+        if (ObjectUtils.isEmpty(user) || ObjectUtils.isEmpty(user.getId())) {
+            throw new BadException("User is required");
+        }
+        Candidate candidate = candidateService.getCandidateById(user.getId());
+        if (ObjectUtils.isEmpty(candidate)) {
+            throw new BadException("Candidate not found for the ID :" + user.getId());
+        }
+        JobApplications application = getJobApplicationById(jobApplicationId);
+        if (ObjectUtils.isEmpty(application)) {
+            throw new BadException("Job application not found: " + jobApplicationId);
+        }
+        if (!application.getCandidateId().equals(candidate.getId())) {
+            throw new BadException("Unauthorized access to this job application");
+        }
+        JobPostings job = jobPostingService.getJobPostingById(application.getJobId());
+        if (ObjectUtils.isEmpty(job)) {
+            throw new BadException("Job not found for the id " + application.getJobId());
+        }
+        if (!job.isInterviewRequired()) {
+            throw new BadException("This job posting does not require an AI interview");
+        }
+        if (ObjectUtils.isEmpty(application.getResumeId()) || application.getResumeId().isBlank()) {
+            throw new BadException("No resume on file for this application");
+        }
+        try {
+            return aiInterviewService.startInterview(job, application);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            throw new BadException(e.getMessage());
+        }
+    }
+
+    public AiInterviewApiResponse submitInterviewAnswerForJobApplication(UserDTO user, String jobApplicationId,
+            InterviewAnswerRequest body) {
+        log.info("Submit AI interview answer for job application {}", jobApplicationId);
+        if (body == null) {
+            throw new BadException("Request body is required");
+        }
+        if (ObjectUtils.isEmpty(user) || ObjectUtils.isEmpty(user.getId())) {
+            throw new BadException("User is required");
+        }
+        Candidate candidate = candidateService.getCandidateById(user.getId());
+        if (ObjectUtils.isEmpty(candidate)) {
+            throw new BadException("Candidate not found for the ID :" + user.getId());
+        }
+        JobApplications application = getJobApplicationById(jobApplicationId);
+        if (ObjectUtils.isEmpty(application)) {
+            throw new BadException("Job application not found: " + jobApplicationId);
+        }
+        if (!application.getCandidateId().equals(candidate.getId())) {
+            throw new BadException("Unauthorized access to this job application");
+        }
+        JobPostings job = jobPostingService.getJobPostingById(application.getJobId());
+        if (ObjectUtils.isEmpty(job)) {
+            throw new BadException("Job not found for the id " + application.getJobId());
+        }
+        if (!job.isInterviewRequired()) {
+            throw new BadException("This job posting does not require an AI interview");
+        }
+        try {
+            return aiInterviewService.submitAnswer(job, application, body.getSessionId(), body.getAnswer());
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            throw new BadException(e.getMessage());
+        }
+    }
+
+    public AiInterviewSummaryResponse getInterviewSummaryForJobApplication(UserDTO user, String jobApplicationId) {
+        log.info("Get AI interview summary for job application {}", jobApplicationId);
+        if (ObjectUtils.isEmpty(user) || ObjectUtils.isEmpty(user.getId())) {
+            throw new BadException("User is required");
+        }
+        Candidate candidate = candidateService.getCandidateById(user.getId());
+        if (ObjectUtils.isEmpty(candidate)) {
+            throw new BadException("Candidate not found for the ID :" + user.getId());
+        }
+        JobApplications application = getJobApplicationById(jobApplicationId);
+        if (ObjectUtils.isEmpty(application)) {
+            throw new BadException("Job application not found: " + jobApplicationId);
+        }
+        if (!application.getCandidateId().equals(candidate.getId())) {
+            throw new BadException("Unauthorized access to this job application");
+        }
+        JobPostings job = jobPostingService.getJobPostingById(application.getJobId());
+        if (ObjectUtils.isEmpty(job)) {
+            throw new BadException("Job not found for the id " + application.getJobId());
+        }
+        try {
+            return aiInterviewService.getInterviewSummary(job, application);
+        } catch (IllegalArgumentException e) {
+            throw new BadException(e.getMessage());
+        }
+    }
+
+    public List<AiInterviewSummaryResponse> listInterviewSummariesForLoggedInCandidate(UserDTO user) {
+        if (ObjectUtils.isEmpty(user) || ObjectUtils.isEmpty(user.getId())) {
+            throw new BadException("User is required");
+        }
+        Candidate candidate = candidateService.getCandidateById(user.getId());
+        if (ObjectUtils.isEmpty(candidate)) {
+            throw new BadException("Candidate not found for the ID :" + user.getId());
+        }
+        return aiInterviewService.listInterviewSummariesForCandidate(candidate.getId());
     }
 
     public StartTestResultSafeResponse startTestForJobApplication(UserDTO user, String jobApplicationId) {

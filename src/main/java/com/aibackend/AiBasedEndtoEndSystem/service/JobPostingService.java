@@ -15,6 +15,7 @@ import org.springframework.util.ObjectUtils;
 import com.aibackend.AiBasedEndtoEndSystem.controller.CompanyProfileController;
 import com.aibackend.AiBasedEndtoEndSystem.controller.JobPostingController;
 import com.aibackend.AiBasedEndtoEndSystem.controller.PublicCompanyJobsController.PublicJobResponse;
+import com.aibackend.AiBasedEndtoEndSystem.dto.AiInterviewFullDetailDto;
 import com.aibackend.AiBasedEndtoEndSystem.dto.JobApplicationGeneratedTestDto;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.CompanyProfile;
@@ -46,6 +47,7 @@ public class JobPostingService {
     private final JobApplicationRepository jobApplicationRepository;
     private final ShortlistEvaluationResultRepository shortlistEvaluationResultRepository;
     private final JobApplicationGeneratedTestService jobApplicationGeneratedTestService;
+    private final AiInterviewService aiInterviewService;
 
     @Lazy
     private final CompanyProfileService companyProfileService;
@@ -375,8 +377,10 @@ public class JobPostingService {
             return null;
         }
         JobApplicationGeneratedTestDto generatedTestDto = toJobApplicationGeneratedTestDto(jobApplicationGeneratedTest);
+        AiInterviewFullDetailDto aiInterview = aiInterviewService
+                .getInterviewFullDetailForJobApplicationOrNull(jobApplicationId);
         return new JobPostingController.ShortlistEvaluationWithJobResponse(
-                evaluation, new CompanyProfileController.JobPostingsResponse(job), generatedTestDto);
+                evaluation, new CompanyProfileController.JobPostingsResponse(job), generatedTestDto, aiInterview);
     }
 
     private static JobApplicationGeneratedTestDto toJobApplicationGeneratedTestDto(JobApplicationGeneratedTest entity) {

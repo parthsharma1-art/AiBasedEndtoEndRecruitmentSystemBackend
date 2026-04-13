@@ -19,6 +19,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.aibackend.AiBasedEndtoEndSystem.dto.AiInterviewApiResponse;
+import com.aibackend.AiBasedEndtoEndSystem.dto.AiInterviewSummaryResponse;
+import com.aibackend.AiBasedEndtoEndSystem.dto.InterviewAnswerRequest;
 import com.aibackend.AiBasedEndtoEndSystem.dto.StartTestResultSafeResponse;
 import com.aibackend.AiBasedEndtoEndSystem.dto.TestAnswerSubmissionRequest;
 import com.aibackend.AiBasedEndtoEndSystem.dto.TestEvaluationResponse;
@@ -62,6 +65,43 @@ public class CandidateApplyJobController {
             throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
         }
         return jobApplicationService.startTestForJobApplication(userDTO, jobApplicationId);
+    }
+
+    @PostMapping("/applied/{jobApplicationId}/interview/start")
+    public AiInterviewApiResponse startAiInterview(@PathVariable String jobApplicationId) {
+        UserDTO userDTO = SecurityUtils.getLoggedInUser();
+        if (userDTO == null) {
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        }
+        return jobApplicationService.startInterviewForJobApplication(userDTO, jobApplicationId);
+    }
+
+    @PostMapping(value = "/applied/{jobApplicationId}/interview/answer", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public AiInterviewApiResponse submitAiInterviewAnswer(
+            @PathVariable String jobApplicationId, @RequestBody InterviewAnswerRequest body) {
+        UserDTO userDTO = SecurityUtils.getLoggedInUser();
+        if (userDTO == null) {
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        }
+        return jobApplicationService.submitInterviewAnswerForJobApplication(userDTO, jobApplicationId, body);
+    }
+
+    @GetMapping("/applied/{jobApplicationId}/interview/summary")
+    public AiInterviewSummaryResponse getAiInterviewSummary(@PathVariable String jobApplicationId) {
+        UserDTO userDTO = SecurityUtils.getLoggedInUser();
+        if (userDTO == null) {
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        }
+        return jobApplicationService.getInterviewSummaryForJobApplication(userDTO, jobApplicationId);
+    }
+
+    @GetMapping("/my-ai-interviews")
+    public List<AiInterviewSummaryResponse> listMyAiInterviews() {
+        UserDTO userDTO = SecurityUtils.getLoggedInUser();
+        if (userDTO == null) {
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        }
+        return jobApplicationService.listInterviewSummariesForLoggedInCandidate(userDTO);
     }
 
     @GetMapping("/applied/{jobApplicationId}/shortlist-evaluation")

@@ -66,5 +66,10 @@ ai:
   test:
     generate:
       url: ${ai-service.base-url}/test/generate
+  interview:
+    start:
+      url: ${ai-service.base-url}/interview/start
+    answer:
+      url: ${ai-service.base-url}/interview/answer
 
 
