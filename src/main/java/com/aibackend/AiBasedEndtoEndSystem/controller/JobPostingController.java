@@ -18,6 +18,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.aibackend.AiBasedEndtoEndSystem.controller.CompanyProfileController.JobPostingsRequest;
 import com.aibackend.AiBasedEndtoEndSystem.controller.CompanyProfileController.JobPostingsResponse;
+import com.aibackend.AiBasedEndtoEndSystem.dto.AiInterviewFullDetailDto;
 import com.aibackend.AiBasedEndtoEndSystem.dto.JobApplicationGeneratedTestDto;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications;
@@ -109,7 +110,7 @@ public class JobPostingController {
         private ShortlistEvaluationResult shortlistEvaluation;
         private CompanyProfileController.JobPostingsResponse jobPosting;
         private JobApplicationGeneratedTestDto generatedTest;
-
+        private AiInterviewFullDetailDto aiInterview;
     }
 
     @Data

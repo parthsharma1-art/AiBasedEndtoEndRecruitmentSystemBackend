@@ -38,6 +38,7 @@ public class JobApplications {
         REJECTED,
         TEST_SCHEDULED,
         INTERVIEW_SCHEDULED,
+        UNDER_RECRUITER_REVIEW,
         HIRED
     }
 
