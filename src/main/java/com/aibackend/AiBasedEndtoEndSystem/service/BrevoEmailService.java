@@ -115,6 +115,37 @@ public class BrevoEmailService {
                 }
         }
 
+        @Async
+        public void sendApplicationRecruiterDecisionEmail(
+                        String toEmail,
+                        String candidateName,
+                        String jobTitle,
+                        String companyName,
+                        boolean hired,
+                        String optionalMessage) {
+                try {
+                        if (toEmail == null || toEmail.isBlank()) {
+                                log.warn("Skipping recruiter decision email: candidate email missing");
+                                return;
+                        }
+                        String dashboardUrl = candidateAppliedJobsDashboardUrl();
+                        String html;
+                        String subject;
+                        if (hired) {
+                                subject = "Congratulations — update on your application";
+                                html = HtmlTemplateUtil.applicationRecruiterHiredTemplate(
+                                                candidateName, jobTitle, companyName, optionalMessage, dashboardUrl);
+                        } else {
+                                subject = "Update on your job application";
+                                html = HtmlTemplateUtil.applicationRecruiterRejectedTemplate(
+                                                candidateName, jobTitle, companyName, optionalMessage, dashboardUrl);
+                        }
+                        sendEmail(toEmail, subject, html, "Recruitment Platform");
+                } catch (Exception e) {
+                        log.warn("Failed to send recruiter decision email to {}: {}", toEmail, e.getMessage());
+                }
+        }
+
         public void sendContactEmail(ContactRequest request) throws Exception {
                 if (ObjectUtils.isEmpty(request.getEmail()) || request.getEmail().isBlank()) {
                         throw new ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST,

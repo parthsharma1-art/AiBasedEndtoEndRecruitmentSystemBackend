@@ -195,7 +195,7 @@ public class CompanyProfileService {
             throw new BadException("Company Profile not found for user " + user.getId());
         }
         JobPostings jobPostings = jobPostingService.updateJobPosting(jobId, companyProfile.get(), recruiter, request);
-        return new CompanyProfileController.JobPostingsResponse(jobPostings);
+        return jobPostingService.toJobPostingsResponse(jobPostings);
 
     }
 

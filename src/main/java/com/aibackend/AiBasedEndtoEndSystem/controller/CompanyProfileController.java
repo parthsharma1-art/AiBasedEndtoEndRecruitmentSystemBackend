@@ -120,7 +120,11 @@ public class CompanyProfileController {
         private boolean isAssessmentRequired;
         private boolean isInterviewRequired;
         private String currency;
+        private int applicationCount;
         public JobPostingsResponse(JobPostings job) {
+            this(job, 0);
+        }
+        public JobPostingsResponse(JobPostings job, int applicationCount) {
             this.id = job.getId();
             this.title = job.getTitle();
             this.description = job.getDescription();
@@ -139,6 +143,7 @@ public class CompanyProfileController {
             this.isAssessmentRequired = job.isAssessmentRequired();
             this.isInterviewRequired = job.isInterviewRequired();
             this.currency = job.getCurrency();
+            this.applicationCount = applicationCount;
         }
     }
 

@@ -263,6 +263,7 @@ public class RecruiterController {
         private Integer activeJobs;
         private Integer selected;
         private Integer rejected;
+        private Integer recruiterReview;
     }
 
     @Data
@@ -300,5 +301,14 @@ public class RecruiterController {
         private String message;
         private String title;
         private String relativeId;
+    }
+
+    @Data
+    public static class RecruiterPipeline{
+        private Integer jobApplication;
+        private Integer AiShortlist;
+        private Integer testScheduled;
+        private Integer interviewScheduled;
+        private Integer underRecruiterReview;
     }
 }

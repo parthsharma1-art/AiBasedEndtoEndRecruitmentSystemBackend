@@ -1,11 +1,11 @@
 package com.aibackend.AiBasedEndtoEndSystem.service;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -23,8 +23,8 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.aibackend.AiBasedEndtoEndSystem.controller.CandidateApplyJobController;
-import com.aibackend.AiBasedEndtoEndSystem.controller.CompanyProfileController;
 import com.aibackend.AiBasedEndtoEndSystem.controller.JobPostingController;
+import com.aibackend.AiBasedEndtoEndSystem.controller.JobPostingController.RecruiterApplicationDecisionRequest;
 import com.aibackend.AiBasedEndtoEndSystem.dto.AiInterviewApiResponse;
 import com.aibackend.AiBasedEndtoEndSystem.dto.AiInterviewFullDetailDto;
 import com.aibackend.AiBasedEndtoEndSystem.dto.AiInterviewSummaryResponse;
@@ -217,10 +217,8 @@ public class JobApplicationService {
     }
 
     public List<JobApplications> getApplicationsForProcessing() {
-        Instant cutoffTime = Instant.now().minus(1, ChronoUnit.MINUTES);
-        return repository.findByStatusAndCreatedAtBefore(
-                JobApplications.JobStatus.UNDER_REVIEW,
-                cutoffTime);
+        return repository.findByStatus(
+                JobApplications.JobStatus.UNDER_REVIEW);
     }
 
     public JobPostingController.JobApplicationResponse toJobApplicationResponse(JobApplications jobApplications,
@@ -231,10 +229,129 @@ public class JobApplicationService {
         response.setCandidateId(jobApplications.getCandidateId());
         response.setApplyDate(jobApplications.getAppliedAt());
         response.setCandidateName(jobApplications.getCandidateName());
+        response.setCandidateEmail(jobApplications.getCandidateEmail());
         response.setResumeId(jobApplications.getResumeId());
         response.setCandidateSkills(candidate.getSkills());
         response.setProfileImageId(candidate.getProfileImageId());
         return response;
+    }
+
+    public List<JobPostingController.JobApplicationResponse> listUnderReviewApplicationsForCompanyJobs(
+            List<String> jobIds,
+            Map<String, JobPostings> jobById) {
+        log.info("listUnderReviewApplicationsForCompanyJobs");
+        log.info("jobIds: {}", jobIds);
+        log.info("jobById: {}", jobById);
+        if (jobIds == null || jobIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<JobApplications> applications = repository.findByJobIdInAndStatus(jobIds, JobStatus.UNDER_RECRUITER_REVIEW);
+        log.info("applications: {}", applications);
+        if (applications.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<JobPostingController.JobApplicationResponse> out = new ArrayList<>();
+        for (JobApplications application : applications) {
+            Candidate candidate = candidateService.getCandidateById(application.getCandidateId());
+            if (candidate == null) {
+                log.warn("Skipping job application {}: candidate {} not found", application.getId(),
+                        application.getCandidateId());
+                continue;
+            }
+            JobPostingController.JobApplicationResponse row = toJobApplicationResponse(application, candidate);
+            JobPostings job = jobById != null ? jobById.get(application.getJobId()) : null;
+            if (job != null) {
+                row.setJobId(job.getId());
+                row.setJobTitle(job.getTitle());
+            }
+            ShortlistEvaluationResult eval = shortlistEvaluationResultService
+                    .getShortlistEvaluationForJobApplication(application.getId());
+            if (!ObjectUtils.isEmpty(eval) && eval.getScore() != null) {
+                row.setAtsScore(eval.getScore());
+            }
+            out.add(row);
+        }
+        return out;
+    }
+
+    public JobPostingController.JobApplicationResponse recruiterDecideJobApplication(UserDTO user,
+            String jobApplicationId,
+            RecruiterApplicationDecisionRequest request) {
+        if (ObjectUtils.isEmpty(user) || ObjectUtils.isEmpty(user.getId())) {
+            throw new BadException("User is required");
+        }
+        if (request == null || request.getDecision() == null) {
+            throw new BadException("decision is required (REJECTED or HIRED)");
+        }
+        JobStatus decision = request.getDecision();
+        if (decision != JobStatus.REJECTED && decision != JobStatus.HIRED) {
+            throw new BadException("decision must be REJECTED or HIRED");
+        }
+        JobApplications application = getJobApplicationById(jobApplicationId);
+        if (ObjectUtils.isEmpty(application)) {
+            throw new BadException("Job application not found: " + jobApplicationId);
+        }
+        if (!JobStatus.UNDER_RECRUITER_REVIEW.equals(application.getStatus())) {
+            throw new BadException("Only applications in UNDER_RECRUITER_REVIEW can be decided with this action");
+        }
+        JobPostings job = jobPostingService.getJobPostingById(application.getJobId());
+        if (ObjectUtils.isEmpty(job)) {
+            throw new BadException("Job not found for the id " + application.getJobId());
+        }
+        CompanyProfile profile = companyProfileService.getCompanyProfileByRecruiterId(user.getId());
+        if (ObjectUtils.isEmpty(profile) || !profile.getId().equals(job.getCompanyId())) {
+            throw new BadException("Unauthorized access to this job application");
+        }
+        application.setStatus(decision);
+        application.setUpdatedAt(Instant.now());
+        application.setUpdatedBy(user.getId());
+        if (decision == JobStatus.REJECTED) {
+            String msg = request.getMessage();
+            application.setRejectReason(msg != null && !msg.isBlank() ? msg.trim() : null);
+        } else {
+            application.setRejectReason(null);
+        }
+        saveJobApplication(application);
+
+        String companyName = resolveCompanyDisplayName(profile);
+        String jobTitle = job.getTitle() != null ? job.getTitle() : "the role";
+        String candidateName = application.getCandidateName() != null && !application.getCandidateName().isBlank()
+                ? application.getCandidateName()
+                : "Candidate";
+        brevoEmailService.sendApplicationRecruiterDecisionEmail(
+                application.getCandidateEmail(),
+                candidateName,
+                jobTitle,
+                companyName,
+                decision == JobStatus.HIRED,
+                request.getMessage());
+
+        Candidate candidate = candidateService.getCandidateById(application.getCandidateId());
+        if (candidate == null) {
+            JobPostingController.JobApplicationResponse minimal = new JobPostingController.JobApplicationResponse();
+            minimal.setId(application.getId());
+            minimal.setStatus(application.getStatus());
+            minimal.setJobId(job.getId());
+            minimal.setJobTitle(job.getTitle());
+            return minimal;
+        }
+        JobPostingController.JobApplicationResponse response = toJobApplicationResponse(application, candidate);
+        response.setJobId(job.getId());
+        response.setJobTitle(job.getTitle());
+        ShortlistEvaluationResult eval = shortlistEvaluationResultService
+                .getShortlistEvaluationForJobApplication(application.getId());
+        if (!ObjectUtils.isEmpty(eval) && eval.getScore() != null) {
+            response.setAtsScore(eval.getScore());
+        }
+        return response;
+    }
+
+    private static String resolveCompanyDisplayName(CompanyProfile profile) {
+        if (profile.getBasicSetting() != null && profile.getBasicSetting().getCompanyName() != null
+                && !profile.getBasicSetting().getCompanyName().isBlank()) {
+            return profile.getBasicSetting().getCompanyName();
+        }
+        return "the company";
     }
 
     public List<CandidateApplyJobController.CandidateAppliedJobResponse> getAllAppliedJobsForCandidate(
@@ -314,7 +431,7 @@ public class JobApplicationService {
         AiInterviewFullDetailDto aiInterview = aiInterviewService
                 .getInterviewFullDetailForJobApplicationOrNull(jobApplicationId);
         return new JobPostingController.ShortlistEvaluationWithJobResponse(
-                evaluation, new CompanyProfileController.JobPostingsResponse(job), null, aiInterview);
+                evaluation, jobPostingService.toJobPostingsResponse(job), null, aiInterview);
     }
 
     public AiInterviewApiResponse startInterviewForJobApplication(UserDTO user, String jobApplicationId) {
@@ -598,7 +715,8 @@ public class JobApplicationService {
         // 50% or above -> selected (HIRED), below 50% -> REJECTED.
         JobPostings job = jobPostingService.getJobPostingById(jobApplications.getJobId());
         double shortlistPercentage = 0;
-        if (ObjectUtils.isEmpty(job) || ObjectUtils.isEmpty(job.getShortlistPercentage()) || job.getShortlistPercentage().doubleValue() == 0) {
+        if (ObjectUtils.isEmpty(job) || ObjectUtils.isEmpty(job.getShortlistPercentage())
+                || job.getShortlistPercentage().doubleValue() == 0) {
             log.error("Job not found for the id " + jobApplications.getJobId());
             shortlistPercentage = 60.0;
         } else {

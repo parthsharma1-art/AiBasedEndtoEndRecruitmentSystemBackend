@@ -330,6 +330,7 @@ public class RecruiterService {
         int rejectedApplications = 0;
         int totalCandidates = 0;
         int selected = 0;
+        int totalRecruiterReview = 0;
         for (JobPostings postings : jobPostings) {
             if (postings.isActive()) {
                 activeJobs++;
@@ -342,8 +343,15 @@ public class RecruiterService {
                     if (JobApplications.JobStatus.REJECTED.equals(application.getStatus())) {
                         rejectedApplications++;
                     }
-                    if (JobApplications.JobStatus.TEST_SCHEDULED.equals(application.getStatus()) || JobApplications.JobStatus.SHORTLISTED.equals(application.getStatus())) {
+                    if (JobApplications.JobStatus.TEST_SCHEDULED.equals(application.getStatus())
+                            || JobApplications.JobStatus.UNDER_RECRUITER_REVIEW.equals(application.getStatus())
+                            || JobApplications.JobStatus.INTERVIEW_SCHEDULED.equals(application.getStatus())
+                            || JobApplications.JobStatus.SHORTLISTED.equals(application.getStatus())) {
+
                         selected++;
+                    }
+                    if (JobApplications.JobStatus.UNDER_RECRUITER_REVIEW.equals(application.getStatus())) {
+                        totalRecruiterReview++;
                     }
                 }
             }

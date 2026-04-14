@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.context.annotation.Lazy;
@@ -68,7 +69,16 @@ public class JobPostingService {
         }
         log.info("Request coming from frontend :{}", request);
         JobPostings jopPosting = createJob(request, companyProfile);
-        return new CompanyProfileController.JobPostingsResponse(jopPosting);
+        return toJobPostingsResponse(jopPosting);
+    }
+
+    public CompanyProfileController.JobPostingsResponse toJobPostingsResponse(JobPostings job) {
+        if (job == null) {
+            return null;
+        }
+        Integer n = jobApplicationService.totalJobAppliedCandidate(job.getId());
+        int count = n != null ? n : 0;
+        return new CompanyProfileController.JobPostingsResponse(job, count);
     }
 
     public JobPostings createJob(
@@ -165,7 +175,7 @@ public class JobPostingService {
         return repository.findByCompanyIdAndIsActiveTrue(profile.getId())
                 .stream()
                 .peek(job -> log.info("Job profile value: {}", job.getProfile()))
-                .map(CompanyProfileController.JobPostingsResponse::new)
+                .map(this::toJobPostingsResponse)
                 .collect(Collectors.toList());
 
     }
@@ -182,7 +192,7 @@ public class JobPostingService {
         }
         return repository.findByCompanyIdAndIsActiveFalse(profile.getId())
                 .stream()
-                .map(CompanyProfileController.JobPostingsResponse::new)
+                .map(this::toJobPostingsResponse)
                 .collect(Collectors.toList());
     }
 
@@ -258,8 +268,7 @@ public class JobPostingService {
                 profile.getBasicSetting().getCompanyName());
         response.setCompanyDomain(
                 profile.getBasicSetting().getCompanyDomain());
-        response.setJobPostingsResponse(
-                new CompanyProfileController.JobPostingsResponse(job));
+        response.setJobPostingsResponse(toJobPostingsResponse(job));
         return response;
     }
 
@@ -269,7 +278,7 @@ public class JobPostingService {
 
         return repository.findByCompanyId(companyId)
                 .stream()
-                .map(CompanyProfileController.JobPostingsResponse::new)
+                .map(this::toJobPostingsResponse)
                 .collect(Collectors.toList());
     }
 
@@ -314,7 +323,7 @@ public class JobPostingService {
             log.info("Job post not found");
             return null;
         }
-        return new CompanyProfileController.JobPostingsResponse(jobPostings);
+        return toJobPostingsResponse(jobPostings);
 
     }
 
@@ -343,10 +352,33 @@ public class JobPostingService {
 
     }
 
-    /**
-     * Latest AI shortlist evaluation plus job posting details for a job application
-     * (recruiter must own the job's company).
-     */
+    public List<JobPostingController.JobApplicationResponse> getUnderReviewJobApplications(UserDTO user) {
+        log.info("Get UNDER_REVIEW job applications for recruiter {}", user.getId());
+        Recruiter recruiter = recruiterService.getRecruiterById(user.getId());
+        if (ObjectUtils.isEmpty(recruiter)) {
+            throw new BadException("Recruiter not found for the ID " + user.getId());
+        }
+        CompanyProfile profile = companyProfileService.getCompanyProfileByRecruiterId(user.getId());
+        if (ObjectUtils.isEmpty(profile) || !profile.getRecruiterId().equals(user.getId())) {
+            throw new BadException("Unauthorize access to the Company profile " + user.getId());
+        }
+        List<JobPostings> jobs = repository.findByCompanyId(profile.getId());
+        if (jobs.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Map<String, JobPostings> jobById = jobs.stream()
+                .collect(Collectors.toMap(JobPostings::getId, Function.identity(), (a, b) -> a));
+        List<String> jobIds = new ArrayList<>(jobById.keySet());
+        return jobApplicationService.listUnderReviewApplicationsForCompanyJobs(jobIds, jobById);
+    }
+
+    public JobPostingController.JobApplicationResponse recruiterDecideJobApplication(UserDTO user,
+            String jobApplicationId,
+            JobPostingController.RecruiterApplicationDecisionRequest request) {
+        log.info("Recruiter decision for job application {}", jobApplicationId);
+        return jobApplicationService.recruiterDecideJobApplication(user, jobApplicationId, request);
+    }
+
     public JobPostingController.ShortlistEvaluationWithJobResponse getShortlistEvaluationForJobApplication(
             UserDTO user,
             String jobApplicationId) {
@@ -380,7 +412,7 @@ public class JobPostingService {
         AiInterviewFullDetailDto aiInterview = aiInterviewService
                 .getInterviewFullDetailForJobApplicationOrNull(jobApplicationId);
         return new JobPostingController.ShortlistEvaluationWithJobResponse(
-                evaluation, new CompanyProfileController.JobPostingsResponse(job), generatedTestDto, aiInterview);
+                evaluation, toJobPostingsResponse(job), generatedTestDto, aiInterview);
     }
 
     private static JobApplicationGeneratedTestDto toJobApplicationGeneratedTestDto(JobApplicationGeneratedTest entity) {
