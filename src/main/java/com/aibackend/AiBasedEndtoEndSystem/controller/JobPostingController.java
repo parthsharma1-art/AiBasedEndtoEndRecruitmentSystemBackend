@@ -92,6 +92,26 @@ public class JobPostingController {
 
     }
 
+    @GetMapping("/applications/under-review")
+    public List<JobApplicationResponse> getUnderReviewApplications() {
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null) {
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        }
+        return jobPostingService.getUnderReviewJobApplications(user);
+    }
+
+    @PostMapping("/applications/{jobApplicationId}/decision")
+    public JobApplicationResponse decideJobApplication(
+            @PathVariable String jobApplicationId,
+            @RequestBody RecruiterApplicationDecisionRequest request) {
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null) {
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        }
+        return jobPostingService.recruiterDecideJobApplication(user, jobApplicationId, request);
+    }
+
     @GetMapping("/applications/{jobApplicationId}/shortlist-evaluation")
     public ShortlistEvaluationWithJobResponse getShortlistEvaluationForJobApplication(
             @PathVariable String jobApplicationId) {
@@ -118,12 +138,21 @@ public class JobPostingController {
         private String id;
         private String profileImageId;
         private String candidateName;
+        private String candidateEmail;
         private String resumeId;
         private Instant applyDate;
         private JobApplications.JobStatus status;
         private String candidateId;
+        private String jobId;
+        private String jobTitle;
         private double atsScore;
         private List<String> candidateSkills;
+    }
+
+    @Data
+    public static class RecruiterApplicationDecisionRequest {
+        private JobApplications.JobStatus decision;
+        private String message;
     }
 
 }

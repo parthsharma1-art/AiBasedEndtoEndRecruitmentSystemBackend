@@ -2,6 +2,7 @@ package com.aibackend.AiBasedEndtoEndSystem.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.ObjectUtils;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -12,6 +13,7 @@ import java.util.List;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
 import com.aibackend.AiBasedEndtoEndSystem.entity.ShortlistEvaluationResult;
+import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications.JobStatus;
 import com.aibackend.AiBasedEndtoEndSystem.service.AiResumeEvaluatingService;
 import com.aibackend.AiBasedEndtoEndSystem.service.JobApplicationService;
 import com.aibackend.AiBasedEndtoEndSystem.service.JobPostingService;
@@ -43,7 +45,8 @@ public class TestController {
                 continue;
             }
             for (JobApplications application : applications) {
-                if (!ObjectUtils.isEmpty(application.getResumeId()) && !application.getResumeId().isBlank()) {
+                if (!ObjectUtils.isEmpty(application.getResumeId()) && !application.getResumeId().isBlank()
+                        && application.getStatus().equals(JobStatus.APPLIED)) {
                     log.info("Resume Id is :{}", application.getResumeId());
                     ShortlistEvaluationResult shortlistEvaluationResult = aiResumeEvaluatingService
                             .sendJobPostingAndResumeToShortlistEvaluate(
@@ -63,6 +66,27 @@ public class TestController {
             }
         }
         return shortlistEvaluationResults;
+    }
+
+    @PostMapping("/{jobApplicationId}")
+    public ShortlistEvaluationResult evaluationResultsByJObEvaluationResults(
+            @PathVariable String jobApplicationId) {
+        log.info("Starting the work for shortlisting");
+        JobApplications application = jobApplicationService.getJobApplicationById(jobApplicationId);
+        if (!ObjectUtils.isEmpty(application.getResumeId()) && !application.getResumeId().isBlank()
+                && application.getStatus().equals(JobStatus.APPLIED)) {
+            JobPostings job = jobPostingService.getJobPostingById(application.getJobId());
+            log.info("Resume Id is :{}", application.getResumeId());
+            ShortlistEvaluationResult shortlistEvaluationResult = aiResumeEvaluatingService
+                    .sendJobPostingAndResumeToShortlistEvaluate(
+                            job,
+                            application.getResumeId(),
+                            application.getCandidateId(),
+                            application.getId())
+                    .get();
+            return shortlistEvaluationResult;
+        }
+        return null;
     }
 
 }

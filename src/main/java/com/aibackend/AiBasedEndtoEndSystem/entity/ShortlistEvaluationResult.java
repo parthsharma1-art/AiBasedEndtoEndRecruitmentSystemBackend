@@ -2,6 +2,7 @@ package com.aibackend.AiBasedEndtoEndSystem.entity;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
@@ -24,9 +25,8 @@ public class ShortlistEvaluationResult {
 
     private String candidateId;
     private String jobPostingId;
-    /** Job application row id when evaluation ran from an application batch. */
+    @Indexed
     private String jobApplicationId;
-    /** GridFS file id of the resume used for this evaluation. */
     private String resumeId;
 
     private Instant evaluatedAt;

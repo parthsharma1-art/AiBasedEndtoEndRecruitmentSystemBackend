@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
@@ -66,6 +67,19 @@ public class AiInterviewService {
         if (application.getResumeId() == null || application.getResumeId().isBlank()) {
             throw new IllegalArgumentException("Resume is missing for this job application");
         }
+        Optional<AiInterviewSession> existingOpt = aiInterviewSessionRepository
+                .findFirstByJobApplicationIdOrderByUpdatedAtDesc(application.getId());
+        if (existingOpt.isPresent()) {
+            AiInterviewSession existing = ensureCompletionMetadataPersisted(existingOpt.get());
+            if (!existing.getCandidateId().equals(application.getCandidateId())) {
+                throw new IllegalArgumentException("Interview session does not belong to this candidate");
+            }
+            log.info("Reusing existing AI interview session id={} jobApplicationId={}", existing.getId(),
+                    application.getId());
+            JsonNode lastAiJson = jsonNodeForApiResponse(existing);
+            return buildApiResponse(job, application, existing, lastAiJson);
+        }
+
         GridFsResource resumeResource = fileStorageService.getFile(application.getResumeId());
         final byte[] resumeBytes;
         final String filename;
@@ -412,6 +426,30 @@ public class AiInterviewService {
                 session.setDetailedEvaluationScores(scores);
             }
         }
+    }
+
+    /**
+     * JSON snapshot for {@link #buildApiResponse}: completion payload from the last answer response when
+     * finished; otherwise the stored start response or an empty object.
+     */
+    private JsonNode jsonNodeForApiResponse(AiInterviewSession session) {
+        if (session.getStatus() == InterviewSessionStatus.COMPLETED) {
+            String raw = lastTurnPostAnswerJson(session);
+            if (raw != null && !raw.isBlank()) {
+                try {
+                    return objectMapper.readTree(raw);
+                } catch (Exception e) {
+                    log.debug("Could not parse last turn JSON for API response: {}", e.getMessage());
+                }
+            }
+        } else if (session.getStartResponseJson() != null && !session.getStartResponseJson().isBlank()) {
+            try {
+                return objectMapper.readTree(session.getStartResponseJson());
+            } catch (Exception e) {
+                log.debug("Could not parse start response JSON for API response: {}", e.getMessage());
+            }
+        }
+        return objectMapper.createObjectNode();
     }
 
     private static AiInterviewSummaryResponse buildSummaryResponse(JobPostings job, JobApplications application,

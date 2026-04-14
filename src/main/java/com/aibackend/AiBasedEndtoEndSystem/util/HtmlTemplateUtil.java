@@ -16,6 +16,8 @@ public final class HtmlTemplateUtil {
     private static final String CONTACT = "contact.html";
     private static final String SHORTLIST_APPROVED = "shortlist-approved.html";
     private static final String SHORTLIST_REJECTED = "shortlist-rejected.html";
+    private static final String RECRUITER_DECISION_HIRED = "recruiter-decision-hired.html";
+    private static final String RECRUITER_DECISION_REJECTED = "recruiter-decision-rejected.html";
 
     private HtmlTemplateUtil() {}
 
@@ -73,6 +75,52 @@ public final class HtmlTemplateUtil {
                 .replace("{{jobTitle}}", escapeHtml(jobTitle))
                 .replace("{{companyName}}", escapeHtml(companyName))
                 .replace("{{dashboardUrl}}", escapeHtml(dashboardUrl != null ? dashboardUrl : ""));
+    }
+
+    public static String applicationRecruiterHiredTemplate(
+            String candidateName,
+            String jobTitle,
+            String companyName,
+            String optionalMessage,
+            String dashboardUrl) {
+        String messageSection = recruiterOptionalMessageSection(optionalMessage);
+        return loadTemplate(RECRUITER_DECISION_HIRED)
+                .replace("{{candidateName}}", escapeHtml(candidateName))
+                .replace("{{jobTitle}}", escapeHtml(jobTitle))
+                .replace("{{companyName}}", escapeHtml(companyName))
+                .replace("{{messageSection}}", messageSection)
+                .replace("{{dashboardUrl}}", escapeHtml(dashboardUrl != null ? dashboardUrl : ""));
+    }
+
+    public static String applicationRecruiterRejectedTemplate(
+            String candidateName,
+            String jobTitle,
+            String companyName,
+            String optionalMessage,
+            String dashboardUrl) {
+        String messageSection = recruiterOptionalMessageSection(optionalMessage);
+        return loadTemplate(RECRUITER_DECISION_REJECTED)
+                .replace("{{candidateName}}", escapeHtml(candidateName))
+                .replace("{{jobTitle}}", escapeHtml(jobTitle))
+                .replace("{{companyName}}", escapeHtml(companyName))
+                .replace("{{messageSection}}", messageSection)
+                .replace("{{dashboardUrl}}", escapeHtml(dashboardUrl != null ? dashboardUrl : ""));
+    }
+
+    /**
+     * Styled note from the recruiter (plain text escaped); empty string if none.
+     */
+    private static String recruiterOptionalMessageSection(String optionalMessage) {
+        if (optionalMessage == null || optionalMessage.isBlank()) {
+            return "";
+        }
+        return """
+                <div style="margin:0 0 16px;padding:12px 14px;background:#fafafa;border-radius:10px;border:1px solid #f4f4f5;">
+                <p style="margin:0 0 4px;font-size:10px;font-weight:600;color:#a1a1aa;text-transform:uppercase;letter-spacing:0.06em;">Note from employer</p>
+                <p style="margin:0;font-size:13px;color:#52525b;line-height:1.5;">%s</p>
+                </div>
+                """
+                .formatted(escapeHtml(optionalMessage.trim()).replace("\n", "<br/>"));
     }
 
     private static String loadTemplate(String filename) {
