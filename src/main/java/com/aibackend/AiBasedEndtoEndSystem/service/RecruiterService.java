@@ -71,6 +71,7 @@ public class RecruiterService {
             MultipartFile idCard) {
         Recruiter recruiter = new Recruiter();
         validateRequest(request);
+        validatePassword(request);
         Optional<Recruiter> existing = repository.findByMobileNumber(request.getMobileNumber());
         if (existing.isPresent()) {
             return userService.toRecruiterDTO(existing.get());
@@ -147,6 +148,9 @@ public class RecruiterService {
         if (ObjectUtils.isEmpty(request.getDesignation())) {
             throw new HrException("Recruiter Designation is required");
         }
+    }
+
+    private void validatePassword(RecruiterController.RecruiterRequest request) {
         if (ObjectUtils.isEmpty(request.getPassword())) {
             throw new HrException("Recruiter Password is required");
         }
