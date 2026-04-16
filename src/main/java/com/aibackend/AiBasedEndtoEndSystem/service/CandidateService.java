@@ -72,9 +72,9 @@ public class CandidateService {
         }
         Candidate candidate = new Candidate();
         candidate.setId(uniqueUtiliy.getNextNumber("CANDIDATE", "cd"));
-        candidate.setName(request.getName());
-        candidate.setEmail(request.getEmail());
-        candidate.setMobileNumber(request.getMobileNumber());
+        candidate.setName(request.getName().trim());
+        candidate.setEmail(request.getEmail().trim());
+        candidate.setMobileNumber(request.getMobileNumber().trim());
         candidate.setAge(request.getAge());
         candidate.setGender(request.getGender().trim());
         if (request.getLocation() != null) {
@@ -269,7 +269,6 @@ public class CandidateService {
     public UserDTO updateCandidateDetails(UserDTO user, CandidateRequest request, MultipartFile profileImage,
             MultipartFile resume) {
         log.info("Update Candidate request for the id :{}", user);
-        validateRequest(request);
         Candidate candidate = candidateRepository.findById(user.getId()).orElse(null);
         if (ObjectUtils.isEmpty(candidate)) {
             throw new BadException("Candidate not found for the id " + user.getId());
@@ -278,26 +277,64 @@ public class CandidateService {
             log.error("Unauthorize access to the candidate :{}", candidate.getId());
             throw new BadException("Unauthorize access to the candidate " + user.getId());
         }
-        candidate.setName(request.getName());
-        candidate.setEmail(request.getEmail());
-        candidate.setMobileNumber(request.getMobileNumber());
-        candidate.setAge(request.getAge());
-        candidate.setGender(request.getGender().trim());
+        if (!ObjectUtils.isEmpty(request.getName())) {
+            candidate.setName(request.getName().trim());
+        }
+        if (!ObjectUtils.isEmpty(request.getEmail())) {
+            Candidate existingCandidate = candidateRepository.findByEmail(request.getEmail().trim()).orElse(null);
+            if (!ObjectUtils.isEmpty(existingCandidate) && !existingCandidate.getId().equals(candidate.getId())) {
+                throw new BadException("Email already exists for the candidate " + existingCandidate.getId());
+            }
+            candidate.setEmail(request.getEmail().trim());
+        }
+        if (!ObjectUtils.isEmpty(request.getMobileNumber())) {
+            Candidate existingCandidate = candidateRepository.findByMobileNumber(request.getMobileNumber().trim()).orElse(null);
+            if (!ObjectUtils.isEmpty(existingCandidate) && !existingCandidate.getId().equals(candidate.getId())) {
+                throw new BadException("Mobile number already exists for the candidate " + existingCandidate.getId());
+            }
+            candidate.setMobileNumber(request.getMobileNumber().trim());
+        }
+        if (request.getAge() != null) {
+            candidate.setAge(request.getAge());
+        }
+        if (!ObjectUtils.isEmpty(request.getGender())) {
+            String gender = request.getGender().trim();
+            if (!"Male".equalsIgnoreCase(gender) && !"Female".equalsIgnoreCase(gender) && !"Other".equalsIgnoreCase(gender)) {
+                throw new BadException("Gender must be one of: Male, Female, Other");
+            }
+            candidate.setGender(gender);
+        }
         if (request.getLocation() != null) {
-            Candidate.Location loc = new Candidate.Location();
-            loc.setCity(request.getLocation().getCity());
-            loc.setState(request.getLocation().getState());
-            loc.setCountry(request.getLocation().getCountry());
+            Candidate.Location loc = candidate.getLocation() != null ? candidate.getLocation() : new Candidate.Location();
+            if (!ObjectUtils.isEmpty(request.getLocation().getCity())) {
+                loc.setCity(request.getLocation().getCity().trim());
+            }
+            if (!ObjectUtils.isEmpty(request.getLocation().getState())) {
+                loc.setState(request.getLocation().getState().trim());
+            }
+            if (!ObjectUtils.isEmpty(request.getLocation().getCountry())) {
+                loc.setCountry(request.getLocation().getCountry().trim());
+            }
             candidate.setLocation(loc);
         }
-        candidate.setSkills(request.getSkills() == null ? new ArrayList<>() : new ArrayList<>(request.getSkills()));
-        candidate.setExperienceYears(request.getExperienceYears());
-        candidate.setHighestQualification(request.getHighestQualification());
-        candidate.setCurrentJobRole(request.getCurrentJobRole());
-        candidate.setCurrentCompany(null);
-        candidate.setExpectedSalary(request.getExpectedSalary());
-        candidate.setCurrentSalary(null);
-        candidate.setResumeId(request.getResumeUrl());
+        if (request.getSkills() != null) {
+            candidate.setSkills(new ArrayList<>(request.getSkills()));
+        }
+        if (request.getExperienceYears() != null) {
+            candidate.setExperienceYears(request.getExperienceYears());
+        }
+        if (!ObjectUtils.isEmpty(request.getHighestQualification())) {
+            candidate.setHighestQualification(request.getHighestQualification().trim());
+        }
+        if (!ObjectUtils.isEmpty(request.getCurrentJobRole())) {
+            candidate.setCurrentJobRole(request.getCurrentJobRole().trim());
+        }
+        if (request.getExpectedSalary() != null) {
+            candidate.setExpectedSalary(request.getExpectedSalary());
+        }
+        if (!ObjectUtils.isEmpty(request.getResumeUrl())) {
+            candidate.setResumeId(request.getResumeUrl().trim());
+        }
         if (profileImage != null && !profileImage.isEmpty()) {
             String profileImageId = fileStorageService.storeFile(profileImage);
             candidate.setProfileImageId(profileImageId);
@@ -355,6 +392,9 @@ public class CandidateService {
         }
         if (ObjectUtils.isEmpty(request.getConfirmPassword())) {
             throw new BadException("Confirm Password is required");
+        }
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new BadException("New Password and Confirm Password should be same");
         }
         Candidate candidate = getCandidateById(user.getId());
         if (ObjectUtils.isEmpty(candidate)) {
