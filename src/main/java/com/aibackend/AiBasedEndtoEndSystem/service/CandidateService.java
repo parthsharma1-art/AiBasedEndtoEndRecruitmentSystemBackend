@@ -274,7 +274,7 @@ public class CandidateService {
         if (ObjectUtils.isEmpty(candidate)) {
             throw new BadException("Candidate not found for the id " + user.getId());
         }
-        if (!ObjectUtils.isEmpty(candidate) && candidate.getId().equals(user.getId())) {
+        if (!ObjectUtils.isEmpty(candidate) && !candidate.getId().equals(user.getId())) {
             log.error("Unauthorize access to the candidate :{}", candidate.getId());
             throw new BadException("Unauthorize access to the candidate " + user.getId());
         }
