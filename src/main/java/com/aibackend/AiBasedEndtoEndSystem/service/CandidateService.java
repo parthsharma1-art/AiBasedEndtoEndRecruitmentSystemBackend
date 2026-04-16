@@ -65,6 +65,7 @@ public class CandidateService {
     public UserDTO createNewCandidate(CandidateRequest request, MultipartFile profileImage, MultipartFile resume) {
         log.info("Create new candidate :{}", request);
         validateRequest(request);
+        validatePassword(request);
         Optional<Candidate> existing = candidateRepository.findByEmail(request.getEmail());
         if (existing.isPresent()) {
             return userService.toCandidateDTO(existing.get());
@@ -75,7 +76,7 @@ public class CandidateService {
         candidate.setEmail(request.getEmail());
         candidate.setMobileNumber(request.getMobileNumber());
         candidate.setAge(request.getAge());
-        candidate.setGender(request.getGender());
+        candidate.setGender(request.getGender().trim());
         if (request.getLocation() != null) {
             Candidate.Location loc = new Candidate.Location();
             loc.setCity(request.getLocation().getCity());
@@ -120,6 +121,10 @@ public class CandidateService {
             throw new BadException("Valid age is required");
         if (ObjectUtils.isEmpty(request.getGender()))
             throw new BadException("Gender is required");
+        String gender = request.getGender().trim();
+        if (!"Male".equalsIgnoreCase(gender) && !"Female".equalsIgnoreCase(gender) && !"Other".equalsIgnoreCase(gender)) {
+            throw new BadException("Gender must be one of: Male, Female, Other");
+        }
         if (request.getLocation() == null)
             throw new BadException("Location details are required");
 
@@ -133,11 +138,14 @@ public class CandidateService {
         if (request.getSkills() == null || request.getSkills().isEmpty())
             throw new BadException("At least one skill is required");
 
-        if (request.getExperienceYears() == null || request.getExperienceYears() < 0)
+        if (!ObjectUtils.isEmpty(request.getExperienceYears()) && request.getExperienceYears() < 0)
             throw new BadException("Experience years must be valid");
 
         if (ObjectUtils.isEmpty(request.getHighestQualification()))
             throw new BadException("Highest qualification is required");
+    }
+
+    private void validatePassword(CandidateRequest request) {
         if (ObjectUtils.isEmpty(request.getPassword())) {
             throw new BadException("Password is required");
         }
@@ -259,7 +267,7 @@ public class CandidateService {
     }
 
     public UserDTO updateCandidateDetails(UserDTO user, CandidateRequest request, MultipartFile profileImage,
-                                          MultipartFile resume) {
+            MultipartFile resume) {
         log.info("Update Candidate request for the id :{}", user);
         validateRequest(request);
         Candidate candidate = candidateRepository.findById(user.getId()).orElse(null);
@@ -274,7 +282,7 @@ public class CandidateService {
         candidate.setEmail(request.getEmail());
         candidate.setMobileNumber(request.getMobileNumber());
         candidate.setAge(request.getAge());
-        candidate.setGender(request.getGender());
+        candidate.setGender(request.getGender().trim());
         if (request.getLocation() != null) {
             Candidate.Location loc = new Candidate.Location();
             loc.setCity(request.getLocation().getCity());
