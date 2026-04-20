@@ -32,6 +32,7 @@ import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
 import com.aibackend.AiBasedEndtoEndSystem.exception.HrException;
 import com.aibackend.AiBasedEndtoEndSystem.repository.RecruiterRepository;
+import com.aibackend.AiBasedEndtoEndSystem.repository.SubscriptionPlanRepository;
 import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
 import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtility;
 
@@ -66,6 +67,8 @@ public class RecruiterService {
     @Autowired
     @Lazy
     private JobApplicationService jobApplicationService;
+    @Autowired
+    private SubscriptionPlanRepository subscriptionPlanRepository;
 
     public UserDTO createNewRecruiter(RecruiterController.RecruiterRequest request, MultipartFile profileImage,
             MultipartFile idCard) {
@@ -303,6 +306,21 @@ public class RecruiterService {
             }
         }
         response.setDesignation(recruiter.getDesignation());
+        Optional<SubscriptionPlan> subscriptionOpt = subscriptionPlanRepository.findByRecruiterId(recruiter.getId());
+        if (subscriptionOpt.isPresent()) {
+            SubscriptionPlan subscriptionPlan = subscriptionOpt.get();
+            RecruiterController.SubscriptionResponse subscriptionResponse =
+                    new RecruiterController.SubscriptionResponse();
+            subscriptionResponse.setId(subscriptionPlan.getId());
+            subscriptionResponse.setType(subscriptionPlan.getType());
+            subscriptionResponse.setStatus(subscriptionPlan.getStatus());
+            subscriptionResponse.setPriceInPaise(subscriptionPlan.getPriceInPaise());
+            subscriptionResponse.setDurationDays(subscriptionPlan.getDurationDays());
+            subscriptionResponse.setDescription(subscriptionPlan.getDescription());
+            subscriptionResponse.setStartDate(subscriptionPlan.getStartDate());
+            subscriptionResponse.setEndDate(subscriptionPlan.getEndDate());
+            response.setSubscription(subscriptionResponse);
+        }
         log.info("Response :{}", response);
         return response;
     }

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment successful</title>
+</head>
+
+<body style="margin:0;padding:0;background:#f8fafc;font-family:Segoe UI,Roboto,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:24px 12px;background:#f8fafc;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0"
+          style="max-width:620px;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+          <tr>
+            <td style="padding:18px 22px;background:linear-gradient(135deg,#16a34a 0%,#15803d 100%);">
+              <p style="margin:0;font-size:12px;letter-spacing:0.06em;color:#dcfce7;text-transform:uppercase;">Subscription payment</p>
+              <h1 style="margin:8px 0 0;font-size:22px;color:#ffffff;">Payment successful</h1>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:22px;">
+              <p style="margin:0 0 14px;font-size:15px;color:#334155;line-height:1.6;">
+                Hi <strong>{{recruiterName}}</strong>, your checkout for <strong>{{companyName}}</strong> was successful.
+              </p>
+
+              <table width="100%" cellpadding="0" cellspacing="0"
+                style="border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;">
+                <tr>
+                  <td style="padding:14px 16px;font-size:14px;color:#334155;">
+                    <p style="margin:0 0 8px;"><strong>Amount:</strong> {{amount}}</p>
+                    <p style="margin:0 0 8px;"><strong>Plan:</strong> {{planType}}</p>
+                    <p style="margin:0 0 8px;"><strong>Start date:</strong> {{startDate}}</p>
+                    <p style="margin:0;"><strong>End date:</strong> {{endDate}}</p>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:16px 0 0;font-size:13px;color:#64748b;">
+                If this was not expected, please contact support.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding:0 24px;">
+              <hr style="border:none;border-top:1px solid #e2e8f0;">
+            </td>
+          </tr>
+
+          <!-- Social Icons -->
+          <tr>
+            <td align="center" style="padding:18px;">
+
+              <a href="https://www.linkedin.com/" style="margin:0 6px;display:inline-block;">
+                <img src="https://ik.imagekit.io/xuh3db9z6/linkedin.png" width="26" height="26"
+                  style="display:block;border:0;">
+              </a>
+
+              <a href="https://x.com/" style="margin:0 6px;display:inline-block;">
+                <img src="https://ik.imagekit.io/xuh3db9z6/twitter.png" width="26" height="26"
+                  style="display:block;border:0;">
+              </a>
+
+              <a href="https://www.instagram.com/" style="margin:0 6px;display:inline-block;">
+                <img src="https://ik.imagekit.io/xuh3db9z6/insta.png" width="26" height="26"
+                  style="display:block;border:0;">
+              </a>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:16px 24px;text-align:center;">
+              <p style="margin:0;font-size:12px;color:#94a3b8;">
+                © 2026 AI Based End to End Recruitment System
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+
+</html>

@@ -58,7 +58,10 @@ public class SecurityConfig {
                                 "/file/**"  ,
                                 "/api/auth/**",
                                 "/auth/**",
-                                "/test/**"
+                                "/test/**",
+                                "/api/checkout/**",
+                                "/api/webhook/**",
+                                "/webhook/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

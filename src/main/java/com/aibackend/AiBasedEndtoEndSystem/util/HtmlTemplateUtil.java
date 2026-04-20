@@ -18,6 +18,7 @@ public final class HtmlTemplateUtil {
     private static final String SHORTLIST_REJECTED = "shortlist-rejected.html";
     private static final String RECRUITER_DECISION_HIRED = "recruiter-decision-hired.html";
     private static final String RECRUITER_DECISION_REJECTED = "recruiter-decision-rejected.html";
+    private static final String CHECKOUT_SUCCESS_RECRUITER = "checkout-success-recruiter.html";
 
     private HtmlTemplateUtil() {}
 
@@ -105,6 +106,22 @@ public final class HtmlTemplateUtil {
                 .replace("{{companyName}}", escapeHtml(companyName))
                 .replace("{{messageSection}}", messageSection)
                 .replace("{{dashboardUrl}}", escapeHtml(dashboardUrl != null ? dashboardUrl : ""));
+    }
+
+    public static String checkoutSuccessRecruiterTemplate(
+            String recruiterName,
+            String companyName,
+            String amount,
+            String planType,
+            String startDate,
+            String endDate) {
+        return loadTemplate(CHECKOUT_SUCCESS_RECRUITER)
+                .replace("{{recruiterName}}", escapeHtml(recruiterName))
+                .replace("{{companyName}}", escapeHtml(companyName))
+                .replace("{{amount}}", escapeHtml(amount))
+                .replace("{{planType}}", escapeHtml(planType))
+                .replace("{{startDate}}", escapeHtml(startDate))
+                .replace("{{endDate}}", escapeHtml(endDate));
     }
 
     /**
