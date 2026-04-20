@@ -3,6 +3,7 @@ package com.aibackend.AiBasedEndtoEndSystem.controller;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.List;
 
 import com.aibackend.AiBasedEndtoEndSystem.entity.Chat;
@@ -27,6 +28,8 @@ import org.springframework.web.server.ResponseStatusException;
 import com.aibackend.AiBasedEndtoEndSystem.config.AuthAppConfig;
 import com.aibackend.AiBasedEndtoEndSystem.controller.CandidateController.CandidateResponse;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
+import com.aibackend.AiBasedEndtoEndSystem.entity.SubscriptionPlan.SubscriptionPlanType;
+import com.aibackend.AiBasedEndtoEndSystem.entity.SubscriptionPlan.SubscriptionStatus;
 import com.aibackend.AiBasedEndtoEndSystem.service.RecruiterService;
 import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
 import com.aibackend.AiBasedEndtoEndSystem.util.SecurityUtils;
@@ -251,7 +254,20 @@ public class RecruiterController {
         private String country;
         private Integer age;
         private String designation;
+        private SubscriptionResponse subscription;
 
+    }
+
+    @Data
+    public static class SubscriptionResponse {
+        private String id;
+        private SubscriptionPlanType type;
+        private SubscriptionStatus status;
+        private Long priceInPaise;
+        private Integer durationDays;
+        private String description;
+        private Instant startDate;
+        private Instant endDate;
     }
 
     @Data

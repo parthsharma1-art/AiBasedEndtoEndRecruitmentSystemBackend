@@ -4,6 +4,10 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
@@ -146,6 +150,31 @@ public class BrevoEmailService {
                 }
         }
 
+        @Async
+        public void sendCheckoutSuccessEmail(
+                        String toEmail,
+                        String recruiterName,
+                        String companyName,
+                        Long amountInPaise,
+                        String planType,
+                        Instant startDate,
+                        Instant endDate) {
+                try {
+                        if (toEmail == null || toEmail.isBlank()) {
+                                log.warn("Skipping checkout success email: recruiter email missing");
+                                return;
+                        }
+                        String amount = formatAmount(amountInPaise);
+                        String start = formatInstant(startDate);
+                        String end = formatInstant(endDate);
+                        String html = HtmlTemplateUtil.checkoutSuccessRecruiterTemplate(
+                                        recruiterName, companyName, amount, planType, start, end);
+                        sendEmail(toEmail, "Your subscription payment was successful", html, "Recruitment Platform");
+                } catch (Exception e) {
+                        log.warn("Failed to send checkout success email to {}: {}", toEmail, e.getMessage());
+                }
+        }
+
         public void sendContactEmail(ContactRequest request) throws Exception {
                 if (ObjectUtils.isEmpty(request.getEmail()) || request.getEmail().isBlank()) {
                         throw new ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST,
@@ -170,5 +199,22 @@ public class BrevoEmailService {
                 if (s == null)
                         return "";
                 return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
+        }
+
+        private static String formatAmount(Long paise) {
+                if (paise == null) {
+                        return "INR 0.00";
+                }
+                double inr = paise / 100.0d;
+                return String.format(Locale.US, "INR %.2f", inr);
+        }
+
+        private static String formatInstant(Instant instant) {
+                if (instant == null) {
+                        return "N/A";
+                }
+                return DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a")
+                                .withZone(ZoneId.systemDefault())
+                                .format(instant);
         }
 }
