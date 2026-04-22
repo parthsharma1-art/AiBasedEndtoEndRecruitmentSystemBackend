@@ -1,16 +1,37 @@
 package com.aibackend.AiBasedEndtoEndSystem.controller;
+import java.util.ArrayList;
+import java.util.List;
 
-import com.aibackend.AiBasedEndtoEndSystem.entity.User;
-import com.aibackend.AiBasedEndtoEndSystem.service.CacheCommonService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.ObjectUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications;
+import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications.JobStatus;
+import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
+import com.aibackend.AiBasedEndtoEndSystem.entity.ShortlistEvaluationResult;
+import com.aibackend.AiBasedEndtoEndSystem.entity.User;
+import com.aibackend.AiBasedEndtoEndSystem.service.AiResumeEvaluatingService;
+import com.aibackend.AiBasedEndtoEndSystem.service.CacheCommonService;
+import com.aibackend.AiBasedEndtoEndSystem.service.JobApplicationService;
+import com.aibackend.AiBasedEndtoEndSystem.service.JobPostingService;
+
+import lombok.extern.slf4j.Slf4j;
+
 @RestController
-@RequestMapping("/test")
+@RequestMapping("/test/shortlist-evaluate")
+@Slf4j
 public class TestController {
+    @Autowired
+    private AiResumeEvaluatingService aiResumeEvaluatingService;
+    @Autowired
+    private JobApplicationService jobApplicationService;
+    @Autowired
+    private JobPostingService jobPostingService;
 
     @Autowired
     private CacheCommonService cacheCommonService;
@@ -23,5 +44,63 @@ public class TestController {
     public User test(@PathVariable String id) {
         return cacheCommonService.getUserById(id);
     }
-}
 
+    @PostMapping
+    public List<ShortlistEvaluationResult> evaluateShortlistForAllJobApplications() {
+        log.info("Starting the work for shortlisting");
+        List<ShortlistEvaluationResult> shortlistEvaluationResults = new ArrayList<>();
+        List<JobPostings> allJobs = jobPostingService.getAllActiveJobPostings();
+        if (ObjectUtils.isEmpty(allJobs)) {
+            return shortlistEvaluationResults;
+        }
+        for (JobPostings job : allJobs) {
+            List<JobApplications> applications = jobApplicationService.getAllJobApplicationsDetails(job);
+            if (ObjectUtils.isEmpty(applications)) {
+                continue;
+            }
+            for (JobApplications application : applications) {
+                if (!ObjectUtils.isEmpty(application.getResumeId()) && !application.getResumeId().isBlank()
+                        && application.getStatus().equals(JobStatus.APPLIED)) {
+                    log.info("Resume Id is :{}", application.getResumeId());
+                    ShortlistEvaluationResult shortlistEvaluationResult = aiResumeEvaluatingService
+                            .sendJobPostingAndResumeToShortlistEvaluate(
+                                    job,
+                                    application.getResumeId(),
+                                    application.getCandidateId(),
+                                    application.getId())
+                            .get();
+                    shortlistEvaluationResults.add(shortlistEvaluationResult);
+                }
+            }
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                log.error("Error in sleeping the thread: {}", e.getMessage());
+                Thread.currentThread().interrupt();
+            }
+        }
+        return shortlistEvaluationResults;
+    }
+
+    @PostMapping("/{jobApplicationId}")
+    public ShortlistEvaluationResult evaluationResultsByJObEvaluationResults(
+            @PathVariable String jobApplicationId) {
+        log.info("Starting the work for shortlisting");
+        JobApplications application = jobApplicationService.getJobApplicationById(jobApplicationId);
+        if (!ObjectUtils.isEmpty(application.getResumeId()) && !application.getResumeId().isBlank()
+                && application.getStatus().equals(JobStatus.APPLIED)) {
+            JobPostings job = jobPostingService.getJobPostingById(application.getJobId());
+            log.info("Resume Id is :{}", application.getResumeId());
+            ShortlistEvaluationResult shortlistEvaluationResult = aiResumeEvaluatingService
+                    .sendJobPostingAndResumeToShortlistEvaluate(
+                            job,
+                            application.getResumeId(),
+                            application.getCandidateId(),
+                            application.getId())
+                    .get();
+            return shortlistEvaluationResult;
+        }
+        return null;
+    }
+
+}

@@ -1,14 +1,17 @@
 package com.aibackend.AiBasedEndtoEndSystem.service;
 
-import static org.springframework.http.HttpStatus.OK;
-
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.aibackend.AiBasedEndtoEndSystem.controller.CandidateApplyJobController;
+import com.aibackend.AiBasedEndtoEndSystem.controller.RecruiterController;
+import com.aibackend.AiBasedEndtoEndSystem.dto.CandidateDashboardResponse;
+import com.aibackend.AiBasedEndtoEndSystem.util.PasswordUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -52,22 +55,28 @@ public class CandidateService {
     private PublicController publicController;
     @Autowired
     private FileStorageService fileStorageService;
+    @Autowired
+    @Lazy
+    private JobApplicationService jobApplicationService;
+    @Autowired
+    @Lazy
+    private JobPostingService jobPostingService;
 
     public UserDTO createNewCandidate(CandidateRequest request, MultipartFile profileImage, MultipartFile resume) {
         log.info("Create new candidate :{}", request);
         validateRequest(request);
+        validatePassword(request);
         Optional<Candidate> existing = candidateRepository.findByEmail(request.getEmail());
         if (existing.isPresent()) {
             return userService.toCandidateDTO(existing.get());
         }
         Candidate candidate = new Candidate();
         candidate.setId(uniqueUtiliy.getNextNumber("CANDIDATE", "cd"));
-        candidate.setName(request.getName());
-        candidate.setEmail(request.getEmail());
-        candidate.setMobileNumber(request.getMobileNumber());
+        candidate.setName(request.getName().trim());
+        candidate.setEmail(request.getEmail().trim());
+        candidate.setMobileNumber(request.getMobileNumber().trim());
         candidate.setAge(request.getAge());
-        candidate.setGender(request.getGender());
-
+        candidate.setGender(request.getGender().trim());
         if (request.getLocation() != null) {
             Candidate.Location loc = new Candidate.Location();
             loc.setCity(request.getLocation().getCity());
@@ -91,6 +100,10 @@ public class CandidateService {
             String resumeId = fileStorageService.storeFile(resume);
             candidate.setResumeId(resumeId);
         }
+        String password = request.getPassword();
+        String confirmPassword = request.getConfirmPassword();
+        candidate.setPassword(PasswordUtil.hashPassword(password));
+        candidate.setConfirmPassword(PasswordUtil.hashPassword(confirmPassword));
         candidateRepository.save(candidate);
         log.info("Saved Candidate :{}", candidate);
         return userService.toCandidateDTO(candidate);
@@ -108,6 +121,10 @@ public class CandidateService {
             throw new BadException("Valid age is required");
         if (ObjectUtils.isEmpty(request.getGender()))
             throw new BadException("Gender is required");
+        String gender = request.getGender().trim();
+        if (!"Male".equalsIgnoreCase(gender) && !"Female".equalsIgnoreCase(gender) && !"Other".equalsIgnoreCase(gender)) {
+            throw new BadException("Gender must be one of: Male, Female, Other");
+        }
         if (request.getLocation() == null)
             throw new BadException("Location details are required");
 
@@ -121,26 +138,40 @@ public class CandidateService {
         if (request.getSkills() == null || request.getSkills().isEmpty())
             throw new BadException("At least one skill is required");
 
-        if (request.getExperienceYears() == null || request.getExperienceYears() < 0)
+        if (!ObjectUtils.isEmpty(request.getExperienceYears()) && request.getExperienceYears() < 0)
             throw new BadException("Experience years must be valid");
 
         if (ObjectUtils.isEmpty(request.getHighestQualification()))
             throw new BadException("Highest qualification is required");
-
     }
 
-    public UserDTO getCandidateByMobileNumber(PublicController.LoginRequest request) {
-        log.info("Get the candidate for mobile Number :{}", request);
-        Optional<Candidate> existing = null;
-        if (!ObjectUtils.isEmpty(request.getEmail())) {
-            existing = candidateRepository.findByEmail(request.getEmail());
-        } else {
-            existing = candidateRepository.findByMobileNumber(request.getMobileNumber());
+    private void validatePassword(CandidateRequest request) {
+        if (ObjectUtils.isEmpty(request.getPassword())) {
+            throw new BadException("Password is required");
         }
-        if (existing.isPresent()) {
-            return userService.toCandidateDTO(existing.get());
+        if (ObjectUtils.isEmpty(request.getConfirmPassword())) {
+            throw new BadException("Confirm Password is required");
         }
-        throw new BadException("No Candidate found with this " + request.getMobileNumber());
+        if (!request.getPassword().equals(request.getConfirmPassword())) {
+            throw new BadException("Password and confirm password should be match");
+        }
+    }
+
+    public UserDTO getCandidateByEmailAndPassword(PublicController.LoginRequest request) {
+        log.info("Candidate email and password details  :{}", request);
+        Optional<Candidate> candidate = null;
+        candidate = candidateRepository.findByEmail(request.getEmail());
+        if (candidate.isPresent()) {
+            String password = request.getPassword();
+            String hashedPassword = candidate.get().getPassword();
+            Boolean value = PasswordUtil.matchPassword(password, hashedPassword);
+            if (value) {
+                return userService.toCandidateDTO(candidate.get());
+            } else {
+                throw new BadException("Password not match");
+            }
+        }
+        throw new BadException("Candidate not found");
     }
 
     public Candidate findById(String id) {
@@ -238,35 +269,72 @@ public class CandidateService {
     public UserDTO updateCandidateDetails(UserDTO user, CandidateRequest request, MultipartFile profileImage,
             MultipartFile resume) {
         log.info("Update Candidate request for the id :{}", user);
-        validateRequest(request);
         Candidate candidate = candidateRepository.findById(user.getId()).orElse(null);
         if (ObjectUtils.isEmpty(candidate)) {
             throw new BadException("Candidate not found for the id " + user.getId());
         }
-        if (!ObjectUtils.isEmpty(candidate) && candidate.getId().equals(user.getId())) {
+        if (!ObjectUtils.isEmpty(candidate) && !candidate.getId().equals(user.getId())) {
             log.error("Unauthorize access to the candidate :{}", candidate.getId());
             throw new BadException("Unauthorize access to the candidate " + user.getId());
         }
-        candidate.setName(request.getName());
-        candidate.setEmail(request.getEmail());
-        candidate.setMobileNumber(request.getMobileNumber());
-        candidate.setAge(request.getAge());
-        candidate.setGender(request.getGender());
+        if (!ObjectUtils.isEmpty(request.getName())) {
+            candidate.setName(request.getName().trim());
+        }
+        if (!ObjectUtils.isEmpty(request.getEmail())) {
+            Candidate existingCandidate = candidateRepository.findByEmail(request.getEmail().trim()).orElse(null);
+            if (!ObjectUtils.isEmpty(existingCandidate) && !existingCandidate.getId().equals(candidate.getId())) {
+                throw new BadException("Email already exists for the candidate " + existingCandidate.getId());
+            }
+            candidate.setEmail(request.getEmail().trim());
+        }
+        if (!ObjectUtils.isEmpty(request.getMobileNumber())) {
+            Candidate existingCandidate = candidateRepository.findByMobileNumber(request.getMobileNumber().trim()).orElse(null);
+            if (!ObjectUtils.isEmpty(existingCandidate) && !existingCandidate.getId().equals(candidate.getId())) {
+                throw new BadException("Mobile number already exists for the candidate " + existingCandidate.getId());
+            }
+            candidate.setMobileNumber(request.getMobileNumber().trim());
+        }
+        if (request.getAge() != null) {
+            candidate.setAge(request.getAge());
+        }
+        if (!ObjectUtils.isEmpty(request.getGender())) {
+            String gender = request.getGender().trim();
+            if (!"Male".equalsIgnoreCase(gender) && !"Female".equalsIgnoreCase(gender) && !"Other".equalsIgnoreCase(gender)) {
+                throw new BadException("Gender must be one of: Male, Female, Other");
+            }
+            candidate.setGender(gender);
+        }
         if (request.getLocation() != null) {
-            Candidate.Location loc = new Candidate.Location();
-            loc.setCity(request.getLocation().getCity());
-            loc.setState(request.getLocation().getState());
-            loc.setCountry(request.getLocation().getCountry());
+            Candidate.Location loc = candidate.getLocation() != null ? candidate.getLocation() : new Candidate.Location();
+            if (!ObjectUtils.isEmpty(request.getLocation().getCity())) {
+                loc.setCity(request.getLocation().getCity().trim());
+            }
+            if (!ObjectUtils.isEmpty(request.getLocation().getState())) {
+                loc.setState(request.getLocation().getState().trim());
+            }
+            if (!ObjectUtils.isEmpty(request.getLocation().getCountry())) {
+                loc.setCountry(request.getLocation().getCountry().trim());
+            }
             candidate.setLocation(loc);
         }
-        candidate.setSkills(request.getSkills() == null ? new ArrayList<>() : new ArrayList<>(request.getSkills()));
-        candidate.setExperienceYears(request.getExperienceYears());
-        candidate.setHighestQualification(request.getHighestQualification());
-        candidate.setCurrentJobRole(request.getCurrentJobRole());
-        candidate.setCurrentCompany(null);
-        candidate.setExpectedSalary(request.getExpectedSalary());
-        candidate.setCurrentSalary(null);
-        candidate.setResumeId(request.getResumeUrl());
+        if (request.getSkills() != null) {
+            candidate.setSkills(new ArrayList<>(request.getSkills()));
+        }
+        if (request.getExperienceYears() != null) {
+            candidate.setExperienceYears(request.getExperienceYears());
+        }
+        if (!ObjectUtils.isEmpty(request.getHighestQualification())) {
+            candidate.setHighestQualification(request.getHighestQualification().trim());
+        }
+        if (!ObjectUtils.isEmpty(request.getCurrentJobRole())) {
+            candidate.setCurrentJobRole(request.getCurrentJobRole().trim());
+        }
+        if (request.getExpectedSalary() != null) {
+            candidate.setExpectedSalary(request.getExpectedSalary());
+        }
+        if (!ObjectUtils.isEmpty(request.getResumeUrl())) {
+            candidate.setResumeId(request.getResumeUrl().trim());
+        }
         if (profileImage != null && !profileImage.isEmpty()) {
             String profileImageId = fileStorageService.storeFile(profileImage);
             candidate.setProfileImageId(profileImageId);
@@ -287,7 +355,57 @@ public class CandidateService {
     }
 
     public Candidate getCandidateById(String id) {
-        log.info("Get all candidates");
+        log.info("Get candidate by id :{}", id);
         return candidateRepository.findById(id).orElse(null);
+    }
+
+    public List<CandidateApplyJobController.CandidateAppliedJobResponse> getAllAppliedJobs(UserDTO user) {
+        log.info("Getting all applied jobs for the user :{}", user);
+        Candidate candidate = getCandidateById(user.getId());
+        if (ObjectUtils.isEmpty(candidate)) {
+            throw new BadException("Candidate not found for ID :" + user.getId());
+        }
+        return jobApplicationService.getAllAppliedJobsForCandidate(candidate);
+    }
+
+    public CandidateDashboardResponse getCandidateDashboard(UserDTO user) {
+        log.info("Candidate dashboard for user :{}", user.getId());
+        Candidate candidate = getCandidateById(user.getId());
+        if (ObjectUtils.isEmpty(candidate)) {
+            throw new BadException("Candidate not found for ID :" + user.getId());
+        }
+        CandidateDashboardResponse response = new CandidateDashboardResponse();
+        response.setSummary(jobApplicationService.buildApplicationSummary(candidate.getId()));
+        response.setApplications(jobApplicationService.getAllAppliedJobsForCandidate(candidate));
+        response.setJobsNotApplied(jobPostingService.getActiveJobsNotAppliedByCandidate(candidate.getId()));
+        return response;
+    }
+
+    public Boolean updateCandidatePassword(UserDTO user, RecruiterController.UpdatePasswordRequest request) {
+        log.info("Update password for the candidate :{}", user);
+
+        if (ObjectUtils.isEmpty(request)) {
+            throw new BadException("Update Password Request is required");
+        }
+        if (ObjectUtils.isEmpty(request.getNewPassword())) {
+            throw new BadException("New Password Request is required");
+        }
+        if (ObjectUtils.isEmpty(request.getConfirmPassword())) {
+            throw new BadException("Confirm Password is required");
+        }
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new BadException("New Password and Confirm Password should be same");
+        }
+        Candidate candidate = getCandidateById(user.getId());
+        if (ObjectUtils.isEmpty(candidate)) {
+            throw new BadException("Candidate not found for the ID :" + user.getId());
+        }
+        log.info("Updating password for the Recruiter ID :{}", user.getId());
+        String password = request.getNewPassword();
+        String confirmPassword = request.getConfirmPassword();
+        candidate.setPassword(PasswordUtil.hashPassword(password));
+        candidate.setConfirmPassword(PasswordUtil.hashPassword(confirmPassword));
+        candidateRepository.save(candidate);
+        return Boolean.TRUE;
     }
 }

@@ -12,6 +12,7 @@ public class CompanyProfile {
     @Id
     private String id;
     private String recruiterId;
+    private String companyLogoId;
     private BasicSetting basicSetting;
     private ContactDetails contactDetails;
     private SocialLinks socialLinks;

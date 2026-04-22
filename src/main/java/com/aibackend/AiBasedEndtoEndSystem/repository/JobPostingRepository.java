@@ -6,7 +6,6 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-import static java.lang.Boolean.TRUE;
 
 @Repository
 public interface JobPostingRepository extends MongoRepository<JobPostings, String> {
@@ -14,4 +13,8 @@ public interface JobPostingRepository extends MongoRepository<JobPostings, Strin
     List<JobPostings> findByCompanyId(String companyId);
 
     List<JobPostings> findByIsActiveTrue(Boolean isActive);
+
+    List<JobPostings> findByCompanyIdAndIsActiveFalse(String companyId);
+
+    List<JobPostings> findByCompanyIdAndIsActiveTrue(String companyId);
 }

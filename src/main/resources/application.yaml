@@ -41,5 +41,45 @@ app.config:
     frontEndUrl: http://localhost:3000
     hostFrontEndUrl: https://ai-based-endto-end-recruitment-syst.vercel.app
 
+brevo:
+  api:
+     key: ${BREVO_API_KEY}
+  sender:
+    email: parthsharma7817@gmail.com
+  receiver:
+    email: ai.recruitment.platform@gmail.com
+
+cron:
+  job:
+    time: "${CRON_JOB_TIME:0 0 */14 * * *}"
+    shortlistEvaluation:
+      time: "${CRON_SHORTLIST_EVALUATION_TIME:0 */8 * * * *}"
+    aiServiceKeepAlive:
+      time: "${CRON_AI_SERVICE_KEEP_ALIVE_TIME:0 */4 * * * *}"
+
+ai-service:
+  base-url: ${AI_SERVICE_BASE_URL:http://127.0.0.1:8000}
+
+shortlist:
+  evaluate:
+    url: ${ai-service.base-url}/shortlist/evaluate
+    batchUrl: ${ai-service.base-url}/shortlist/evaluate-batch
+  atsScore:
+    url: ${ai-service.base-url}/shortlist/ats-score
+
+ai:
+  test:
+    generate:
+      url: ${ai-service.base-url}/test/generate
+  interview:
+    start:
+      url: ${ai-service.base-url}/interview/start
+    answer:
+      url: ${ai-service.base-url}/interview/answer
+
+razorpay:
+  key-id: ${RAZORPAY_KEY_ID}
+  key-secret: ${RAZORPAY_KEY_SECRET}
+  webhook-secret: ${RAZORPAY_WEBHOOK_SECRET}
 
 

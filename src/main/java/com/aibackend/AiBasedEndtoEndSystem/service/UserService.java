@@ -32,7 +32,7 @@ public class UserService {
             return toUserDTO(existing.get());
         }
         User user = new User();
-        user.setId(uniqueUtiliy.getNextNumber("USER","us"));
+        user.setId(uniqueUtiliy.getNextNumber("USER", "us"));
         user.setAge(request.getAge());
         user.setName(request.getName());
         user.setMobileNumber(request.getMobileNumber());
@@ -71,12 +71,10 @@ public class UserService {
 
 
     public UserDTO getUserByMobileNumber(PublicController.LoginRequest request) {
-        Optional<User> user=null;
-        if(!ObjectUtils.isEmpty(request.getMobileNumber())){
-            user = userRepository.findByMobileNumber(request.getMobileNumber());
-        }else{
-            user=userRepository.findByEmail(request.getEmail());
-        }
+        Optional<User> user = null;
+
+        user = userRepository.findByEmail(request.getEmail());
+
         if (ObjectUtils.isEmpty(user)) {
             throw new UserNotFoundException("This User do not exist " + request);
         }

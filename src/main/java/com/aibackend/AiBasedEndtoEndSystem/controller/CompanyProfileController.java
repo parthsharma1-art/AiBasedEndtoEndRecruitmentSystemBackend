@@ -1,27 +1,32 @@
 package com.aibackend.AiBasedEndtoEndSystem.controller;
 
+import static org.springframework.http.HttpStatus.UNAUTHORIZED;
+
 import java.time.Instant;
 import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.CompanyProfile.BasicSetting;
 import com.aibackend.AiBasedEndtoEndSystem.entity.CompanyProfile.ContactDetails;
 import com.aibackend.AiBasedEndtoEndSystem.entity.CompanyProfile.SocialLinks;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
+import com.aibackend.AiBasedEndtoEndSystem.entity.SalaryRangeLpa;
+import com.aibackend.AiBasedEndtoEndSystem.jackson.SalaryRangeLpaDeserializer;
 import com.aibackend.AiBasedEndtoEndSystem.service.CompanyProfileService;
 import com.aibackend.AiBasedEndtoEndSystem.service.JobPostingService;
 import com.aibackend.AiBasedEndtoEndSystem.util.SecurityUtils;
-import static org.springframework.http.HttpStatus.UNAUTHORIZED;
-
+import org.springframework.http.MediaType;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
@@ -35,12 +40,13 @@ public class CompanyProfileController {
     @Autowired
     private JobPostingService jobPostingService;
 
-    @PutMapping("/update")
-    public CompanyProfileResponse updateCompanyProfile(@RequestBody CompanyProfileRequest request) {
+    @PutMapping(value="/update" , consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public CompanyProfileResponse updateCompanyProfile(@ModelAttribute CompanyProfileRequest request,
+            @RequestPart(value = "companyLogo", required = false) MultipartFile companyLogo) {
         UserDTO user = SecurityUtils.getLoggedInUser();
         if (user == null)
             throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
-        return companyProfileService.updateCompanyProfile(request, user);
+        return companyProfileService.updateCompanyProfile(request, user, companyLogo);
     }
 
     @GetMapping("/details")
@@ -67,14 +73,13 @@ public class CompanyProfileController {
 
     }
 
-    @PostMapping("/job/post")
-    public JobPostingsResponse createJob(@RequestBody JobPostingsRequest request) {
-        log.info("The job posting request is :{}", request);
+    @GetMapping("/deleted-jobs")
+    public List<JobPostingsResponse> getAllDeletedJobs() {
         UserDTO user = SecurityUtils.getLoggedInUser();
         if (user == null)
             throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
-        log.info("Logged In user: {}", user);
-        return companyProfileService.createJobPosting(user, request);
+        log.info("Get inactive jobs for user :{}", user);
+        return jobPostingService.getAllInactiveJobs(user);
     }
 
     @Data
@@ -82,10 +87,17 @@ public class CompanyProfileController {
         private String title;
         private String description;
         private List<String> skillsRequired;
-        private String salaryRange;
         private JobPostings.JobType jobType;
         private Integer experienceRequired;
+        private List<String> locations;
         private String profile;
+        private Boolean isAssessmentRequired;
+        private Boolean isInterviewRequired;
+        private Double shortlistPercentage;
+        private String salaryRange;
+        @JsonDeserialize(using = SalaryRangeLpaDeserializer.class)
+        private SalaryRangeLpa salaryRangeInLPA;
+        private String currency;
     }
 
     @Data
@@ -94,7 +106,9 @@ public class CompanyProfileController {
         private String title;
         private String description;
         private List<String> skillsRequired;
+        private Double shortlistPercentage;
         private String salaryRange;
+        private SalaryRangeLpa salaryRangeInLPA;
         private JobPostings.JobType jobType;
         private Integer experienceRequired;
         private String postBy;
@@ -102,13 +116,22 @@ public class CompanyProfileController {
         private Instant createdAt;
         private boolean isActive;
         private String profile;
-
+        private List<String> locations;
+        private boolean isAssessmentRequired;
+        private boolean isInterviewRequired;
+        private String currency;
+        private int applicationCount;
         public JobPostingsResponse(JobPostings job) {
+            this(job, 0);
+        }
+        public JobPostingsResponse(JobPostings job, int applicationCount) {
             this.id = job.getId();
             this.title = job.getTitle();
             this.description = job.getDescription();
             this.skillsRequired = job.getSkillsRequired();
-            this.salaryRange = job.getSalaryRange();
+            this.shortlistPercentage = job.getShortlistPercentage();
+            this.salaryRangeInLPA = job.getSalaryRangeInLPA();
+            this.salaryRange = JobPostingService.buildSalaryRangeDisplay(job);
             this.jobType = job.getJobType();
             this.experienceRequired = job.getExperienceRequired();
             this.postBy = job.getPostBy();
@@ -116,6 +139,11 @@ public class CompanyProfileController {
             this.createdAt = job.getCreatedAt();
             this.isActive = job.isActive();
             this.profile = job.getProfile();
+            this.locations = job.getLocations();
+            this.isAssessmentRequired = job.isAssessmentRequired();
+            this.isInterviewRequired = job.isInterviewRequired();
+            this.currency = job.getCurrency();
+            this.applicationCount = applicationCount;
         }
     }
 
@@ -130,6 +158,8 @@ public class CompanyProfileController {
     public static class CompanyProfileResponse {
         private String id;
         private String recruiterId;
+        private String companyLogoId;
+        private String recruiterProfileImageId;
         private BasicSetting basicSetting;
         private ContactDetails contactDetails;
         private SocialLinks socialLinks;

@@ -1,46 +1,92 @@
 package com.aibackend.AiBasedEndtoEndSystem.service;
 
-import com.aibackend.AiBasedEndtoEndSystem.controller.CompanyProfileController;
-import com.aibackend.AiBasedEndtoEndSystem.controller.PublicCompanyJobsController.PublicJobResponse;
-import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
-import com.aibackend.AiBasedEndtoEndSystem.entity.CompanyProfile;
-import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
-import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
-import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
-import com.aibackend.AiBasedEndtoEndSystem.repository.JobPostingRepository;
-import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtility;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
 
-import java.time.Instant;
-import java.util.*;
-import java.util.stream.Collectors;
+import com.aibackend.AiBasedEndtoEndSystem.controller.CompanyProfileController;
+import com.aibackend.AiBasedEndtoEndSystem.controller.JobPostingController;
+import com.aibackend.AiBasedEndtoEndSystem.controller.PublicCompanyJobsController.PublicJobResponse;
+import com.aibackend.AiBasedEndtoEndSystem.dto.AiInterviewFullDetailDto;
+import com.aibackend.AiBasedEndtoEndSystem.dto.JobApplicationGeneratedTestDto;
+import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
+import com.aibackend.AiBasedEndtoEndSystem.entity.CompanyProfile;
+import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplicationGeneratedTest;
+import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications;
+import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
+import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
+import com.aibackend.AiBasedEndtoEndSystem.entity.SalaryRangeLpa;
+import com.aibackend.AiBasedEndtoEndSystem.entity.ShortlistEvaluationResult;
+import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
+import com.aibackend.AiBasedEndtoEndSystem.repository.JobApplicationRepository;
+import com.aibackend.AiBasedEndtoEndSystem.repository.JobPostingRepository;
+import com.aibackend.AiBasedEndtoEndSystem.repository.ShortlistEvaluationResultRepository;
+import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtility;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class JobPostingService {
 
-    private final UniqueUtility uniqueUtiliy;
+    private final UniqueUtility uniqueUtility;
     private final JobPostingRepository repository;
+    @Lazy
+    private final RecruiterService recruiterService;
+    private final JobApplicationService jobApplicationService;
+    private final JobApplicationRepository jobApplicationRepository;
+    private final ShortlistEvaluationResultRepository shortlistEvaluationResultRepository;
+    private final JobApplicationGeneratedTestService jobApplicationGeneratedTestService;
+    private final AiInterviewService aiInterviewService;
 
     @Lazy
     private final CompanyProfileService companyProfileService;
 
-    /*
-     * --------------------------------------------------
-     * CREATE JOB
-     * --------------------------------------------------
-     */
+    public CompanyProfileController.JobPostingsResponse createJobPosting(UserDTO user,
+            CompanyProfileController.JobPostingsRequest request) {
+        log.info("Creating job for the recruiter :{}", user);
+        CompanyProfile companyProfile = companyProfileService.getCompanyProfileByRecruiterId(user.getId());
+        if (ObjectUtils.isEmpty(companyProfile)) {
+            throw new BadException("Company Profile not found for the user " + user.getId());
+        }
+        if (!companyProfile.getRecruiterId().equals(user.getId())) {
+            log.error("Unauthorize HR access to the Company profile :{}", companyProfile.getId());
+            throw new BadException("Unauthorize access to the Company profile " + user.getId());
+        }
+        if (ObjectUtils.isEmpty(companyProfile.getBasicSetting())) {
+            throw new BadException("Basic Settings are required Before Posting jobs");
+        }
+        log.info("Request coming from frontend :{}", request);
+        JobPostings jopPosting = createJob(request, companyProfile);
+        return toJobPostingsResponse(jopPosting);
+    }
+
+    public CompanyProfileController.JobPostingsResponse toJobPostingsResponse(JobPostings job) {
+        if (job == null) {
+            return null;
+        }
+        Integer n = jobApplicationService.totalJobAppliedCandidate(job.getId());
+        int count = n != null ? n : 0;
+        return new CompanyProfileController.JobPostingsResponse(job, count);
+    }
+
     public JobPostings createJob(
             CompanyProfileController.JobPostingsRequest request,
             CompanyProfile companyProfile) {
         log.info("Creating new job for company: {}", companyProfile.getId());
         JobPostings job = new JobPostings();
-        job.setId(uniqueUtiliy.getNextNumber("JOB_POSTING", "jobPosting"));
+        job.setId(uniqueUtility.getNextNumber("JOB_POSTING", "jobPosting"));
         job.setCompanyId(companyProfile.getId());
         job.setPostBy(companyProfile.getRecruiterId());
         job.setActive(Boolean.TRUE);
@@ -49,6 +95,7 @@ public class JobPostingService {
         job.setUpdatedAt(now);
         job.setCreatedBy(companyProfile.getRecruiterId());
         job.setUpdatedBy(companyProfile.getRecruiterId());
+        job.setLocations(request.getLocations());
         applyRequestToJob(job, request);
         return save(job);
     }
@@ -65,7 +112,46 @@ public class JobPostingService {
         job.setProfile(request.getProfile());
         job.setSkillsRequired(request.getSkillsRequired());
         job.setExperienceRequired(request.getExperienceRequired());
-        job.setSalaryRange(request.getSalaryRange());
+        job.setSalaryRangeInLPA(request.getSalaryRangeInLPA());
+        job.setShortlistPercentage(request.getShortlistPercentage());
+        job.setCurrency(request.getCurrency());
+        job.setLocations(request.getLocations());
+        job.setAssessmentRequired(request.getIsAssessmentRequired());
+        job.setInterviewRequired(request.getIsInterviewRequired());
+    }
+
+    public static String buildSalaryRangeDisplay(JobPostings job) {
+        if (job == null) {
+            return null;
+        }
+        String legacy = job.getSalaryRange();
+        if (legacy != null && !legacy.isBlank()) {
+            return legacy.trim();
+        }
+        return formatSalaryRangeInLpa(job.getSalaryRangeInLPA(), job.getCurrency());
+    }
+
+    private static String formatSalaryRangeInLpa(SalaryRangeLpa range, String currency) {
+        if (range == null) {
+            return null;
+        }
+        Integer lo = range.getMin();
+        Integer hi = range.getMax();
+        if (lo == null && hi == null) {
+            return null;
+        }
+        String core;
+        if (lo != null && hi != null) {
+            core = lo + "-" + hi + " LPA";
+        } else if (hi != null) {
+            core = "up to " + hi + " LPA";
+        } else {
+            core = lo + "+ LPA";
+        }
+        if (currency != null && !currency.isBlank()) {
+            return currency.trim() + " " + core;
+        }
+        return core;
     }
 
     public List<JobPostings> getAllJobPostings(Recruiter recruiter) {
@@ -86,12 +172,28 @@ public class JobPostingService {
             log.error("Unauthorize access to the Company profile :{}", profile.getId());
             throw new BadException("Unauthorize access to the Company profile " + user.getId());
         }
-        return repository.findByCompanyId(profile.getId())
+        return repository.findByCompanyIdAndIsActiveTrue(profile.getId())
                 .stream()
                 .peek(job -> log.info("Job profile value: {}", job.getProfile()))
-                .map(CompanyProfileController.JobPostingsResponse::new)
+                .map(this::toJobPostingsResponse)
                 .collect(Collectors.toList());
 
+    }
+
+    public List<CompanyProfileController.JobPostingsResponse> getAllInactiveJobs(UserDTO user) {
+        log.info("Fetching inactive (isActive=false) jobs for user: {}", user.getId());
+        CompanyProfile profile = companyProfileService.getCompanyProfileByRecruiterId(user.getId());
+        if (ObjectUtils.isEmpty(profile)) {
+            return Collections.emptyList();
+        }
+        if (!profile.getRecruiterId().equals(user.getId())) {
+            log.error("Unauthorize access to the Company profile :{}", profile.getId());
+            throw new BadException("Unauthorize access to the Company profile " + user.getId());
+        }
+        return repository.findByCompanyIdAndIsActiveFalse(profile.getId())
+                .stream()
+                .map(this::toJobPostingsResponse)
+                .collect(Collectors.toList());
     }
 
     public List<PublicJobResponse> getAllJobs() {
@@ -115,10 +217,45 @@ public class JobPostingService {
                 log.warn("Company not found for id: {}", job.getCompanyId());
                 continue;
             }
+
             PublicJobResponse response = getJobResponse(job, profile);
+            response.setTotalAppliedCandidates(jobApplicationService.totalJobAppliedCandidate(job.getId()));
             responses.add(response);
         }
 
+        return responses;
+    }
+
+    public List<PublicJobResponse> getActiveJobsNotAppliedByCandidate(String candidateId) {
+        log.info("Fetching active jobs not applied by candidate: {}", candidateId);
+        Set<String> appliedJobIds = jobApplicationRepository.findByCandidateId(candidateId).stream()
+                .map(JobApplications::getJobId)
+                .collect(Collectors.toSet());
+        List<JobPostings> jobs = repository.findByIsActiveTrue(Boolean.TRUE);
+        if (jobs.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<JobPostings> notApplied = jobs.stream()
+                .filter(j -> !appliedJobIds.contains(j.getId()))
+                .collect(Collectors.toList());
+        if (notApplied.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Set<String> companyIds = notApplied.stream()
+                .map(JobPostings::getCompanyId)
+                .collect(Collectors.toSet());
+        Map<String, CompanyProfile> companyMap = companyProfileService.getCompanyProfilesByIds(companyIds);
+        List<PublicJobResponse> responses = new ArrayList<>();
+        for (JobPostings job : notApplied) {
+            CompanyProfile profile = companyMap.get(job.getCompanyId());
+            if (profile == null || ObjectUtils.isEmpty(profile.getBasicSetting())) {
+                log.warn("Company not found for id: {}", job.getCompanyId());
+                continue;
+            }
+            PublicJobResponse response = getJobResponse(job, profile);
+            response.setTotalAppliedCandidates(jobApplicationService.totalJobAppliedCandidate(job.getId()));
+            responses.add(response);
+        }
         return responses;
     }
 
@@ -131,31 +268,20 @@ public class JobPostingService {
                 profile.getBasicSetting().getCompanyName());
         response.setCompanyDomain(
                 profile.getBasicSetting().getCompanyDomain());
-        response.setJobPostingsResponse(
-                new CompanyProfileController.JobPostingsResponse(job));
+        response.setJobPostingsResponse(toJobPostingsResponse(job));
         return response;
     }
 
-    /*
-     * --------------------------------------------------
-     * JOBS BY COMPANY
-     * --------------------------------------------------
-     */
     public List<CompanyProfileController.JobPostingsResponse> allJobsByCompanyId(String companyId) {
 
         log.info("Fetching jobs for company: {}", companyId);
 
         return repository.findByCompanyId(companyId)
                 .stream()
-                .map(CompanyProfileController.JobPostingsResponse::new)
+                .map(this::toJobPostingsResponse)
                 .collect(Collectors.toList());
     }
 
-    /*
-     * --------------------------------------------------
-     * UPDATE JOB
-     * --------------------------------------------------
-     */
     public JobPostings updateJobPosting(
             String id,
             CompanyProfile companyProfile,
@@ -185,7 +311,8 @@ public class JobPostingService {
             log.error("job not found for the id :{}", id);
             throw new BadException("Job not found " + id);
         }
-        repository.delete(jobPostings);
+        jobPostings.setActive(false);
+        save(jobPostings);
         return true;
     }
 
@@ -196,7 +323,119 @@ public class JobPostingService {
             log.info("Job post not found");
             return null;
         }
-        return new CompanyProfileController.JobPostingsResponse(jobPostings);
+        return toJobPostingsResponse(jobPostings);
 
+    }
+
+    public JobPostings getJobPostingById(String id) {
+        log.info("Get job Posting for the id :{}", id);
+        JobPostings jobPostings = repository.findById(id).orElse(null);
+        if (ObjectUtils.isEmpty(jobPostings)) {
+            log.info("Job not found for the id " + id);
+            return null;
+        }
+        return jobPostings;
+
+    }
+
+    public List<JobPostingController.JobApplicationResponse> getAllJobApplications(UserDTO user, String jobId) {
+        log.info("Get all job applications for the user :{} and jobID :{}", user, jobId);
+        Recruiter recruiter = recruiterService.getRecruiterById(user.getId());
+        if (ObjectUtils.isEmpty(recruiter)) {
+            throw new BadException("Recruiter not found for the ID " + user.getId());
+        }
+        JobPostings jobPostings = getJobPostingById(jobId);
+        if (ObjectUtils.isEmpty(jobPostings)) {
+            throw new BadException("Job not found for the ID " + jobId);
+        }
+        return jobApplicationService.getAllJobApplications(jobPostings);
+
+    }
+
+    public List<JobPostingController.JobApplicationResponse> getUnderReviewJobApplications(UserDTO user) {
+        log.info("Get UNDER_REVIEW job applications for recruiter {}", user.getId());
+        Recruiter recruiter = recruiterService.getRecruiterById(user.getId());
+        if (ObjectUtils.isEmpty(recruiter)) {
+            throw new BadException("Recruiter not found for the ID " + user.getId());
+        }
+        CompanyProfile profile = companyProfileService.getCompanyProfileByRecruiterId(user.getId());
+        if (ObjectUtils.isEmpty(profile) || !profile.getRecruiterId().equals(user.getId())) {
+            throw new BadException("Unauthorize access to the Company profile " + user.getId());
+        }
+        List<JobPostings> jobs = repository.findByCompanyId(profile.getId());
+        if (jobs.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Map<String, JobPostings> jobById = jobs.stream()
+                .collect(Collectors.toMap(JobPostings::getId, Function.identity(), (a, b) -> a));
+        List<String> jobIds = new ArrayList<>(jobById.keySet());
+        return jobApplicationService.listUnderReviewApplicationsForCompanyJobs(jobIds, jobById);
+    }
+
+    public JobPostingController.JobApplicationResponse recruiterDecideJobApplication(UserDTO user,
+            String jobApplicationId,
+            JobPostingController.RecruiterApplicationDecisionRequest request) {
+        log.info("Recruiter decision for job application {}", jobApplicationId);
+        return jobApplicationService.recruiterDecideJobApplication(user, jobApplicationId, request);
+    }
+
+    public JobPostingController.ShortlistEvaluationWithJobResponse getShortlistEvaluationForJobApplication(
+            UserDTO user,
+            String jobApplicationId) {
+        log.info("Get shortlist evaluation for job application {}", jobApplicationId);
+        Recruiter recruiter = recruiterService.getRecruiterById(user.getId());
+        if (ObjectUtils.isEmpty(recruiter)) {
+            throw new BadException("Recruiter not found for the ID " + user.getId());
+        }
+        JobApplications application = jobApplicationRepository.findById(jobApplicationId).orElse(null);
+        if (ObjectUtils.isEmpty(application)) {
+            throw new BadException("Job application not found: " + jobApplicationId);
+        }
+        JobPostings job = getJobPostingById(application.getJobId());
+        if (ObjectUtils.isEmpty(job)) {
+            throw new BadException("Job not found for the ID " + application.getJobId());
+        }
+        CompanyProfile profile = companyProfileService.getCompanyProfileByRecruiterId(user.getId());
+        if (ObjectUtils.isEmpty(profile) || !profile.getId().equals(job.getCompanyId())) {
+            throw new BadException("Unauthorized access to this job application");
+        }
+        ShortlistEvaluationResult evaluation = shortlistEvaluationResultRepository
+                .findFirstByJobApplicationIdOrderByEvaluatedAtDesc(jobApplicationId)
+                .orElse(null);
+        JobApplicationGeneratedTest jobApplicationGeneratedTest = jobApplicationGeneratedTestService
+                .getJobApplicationGeneratedTestByJobPostingId(jobApplicationId);
+
+        if (evaluation == null) {
+            return null;
+        }
+        JobApplicationGeneratedTestDto generatedTestDto = toJobApplicationGeneratedTestDto(jobApplicationGeneratedTest);
+        AiInterviewFullDetailDto aiInterview = aiInterviewService
+                .getInterviewFullDetailForJobApplicationOrNull(jobApplicationId);
+        return new JobPostingController.ShortlistEvaluationWithJobResponse(
+                evaluation, toJobPostingsResponse(job), generatedTestDto, aiInterview);
+    }
+
+    private static JobApplicationGeneratedTestDto toJobApplicationGeneratedTestDto(JobApplicationGeneratedTest entity) {
+        if (ObjectUtils.isEmpty(entity)) {
+            return null;
+        }
+        return new JobApplicationGeneratedTestDto(
+                entity.getId(),
+                entity.getJobApplicationId(),
+                entity.getCandidateId(),
+                entity.getJobId(),
+                entity.getCreatedAt(),
+                entity.getMcqs(),
+                entity.getCodingQuestions(),
+                entity.getSubmittedMcqAnswers(),
+                entity.getSubmittedCodingAnswers(),
+                entity.getMcqEvaluations(),
+                entity.getCodingEvaluations(),
+                entity.getEvaluatedAt());
+    }
+
+    public List<JobPostings> getAllActiveJobPostings() {
+        log.info("Return all posted jobs where isActive is true");
+        return repository.findByIsActiveTrue(Boolean.TRUE);
     }
 }

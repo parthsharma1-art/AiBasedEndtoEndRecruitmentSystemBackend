@@ -3,6 +3,7 @@ package com.aibackend.AiBasedEndtoEndSystem.controller;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.List;
 
 import com.aibackend.AiBasedEndtoEndSystem.entity.Chat;
@@ -27,6 +28,8 @@ import org.springframework.web.server.ResponseStatusException;
 import com.aibackend.AiBasedEndtoEndSystem.config.AuthAppConfig;
 import com.aibackend.AiBasedEndtoEndSystem.controller.CandidateController.CandidateResponse;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
+import com.aibackend.AiBasedEndtoEndSystem.entity.SubscriptionPlan.SubscriptionPlanType;
+import com.aibackend.AiBasedEndtoEndSystem.entity.SubscriptionPlan.SubscriptionStatus;
 import com.aibackend.AiBasedEndtoEndSystem.service.RecruiterService;
 import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
 import com.aibackend.AiBasedEndtoEndSystem.util.SecurityUtils;
@@ -132,6 +135,8 @@ public class RecruiterController {
         private String state;
         private String country;
         private String designation;
+        private String password;
+        private String confirmPassword;
     }
 
     @PostMapping("/logout")
@@ -196,7 +201,7 @@ public class RecruiterController {
         UserDTO user = SecurityUtils.getLoggedInUser();
         if (user == null)
             throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
-        log.info("Get All chats for the user :{}", user);
+        log.info("Get chats for the recruiter :{}", user);
         return chatService.getAllChats(user, Chat.Source.RECRUITER);
     }
 
@@ -215,7 +220,25 @@ public class RecruiterController {
         if (user == null)
             throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
         log.info("Get notifications for the user :{}", user);
-        return notificationService.markReadNotification(user,id);
+        return notificationService.markReadNotification(user, id);
+    }
+
+    @PostMapping("/notification/mark-all-read")
+    public Boolean markAllReadyNotification() {
+        UserDTO userDTO = SecurityUtils.getLoggedInUser();
+        return notificationService.markAllRead(userDTO);
+    }
+
+    @PostMapping("/update-password")
+    public Boolean updateRecruiterPassword(@RequestBody UpdatePasswordRequest request) {
+        UserDTO userDTO = SecurityUtils.getLoggedInUser();
+        return recruiterService.updateRecruiterPassword(userDTO, request);
+    }
+
+    @Data
+    public static class UpdatePasswordRequest {
+        private String newPassword;
+        private String confirmPassword;
     }
 
     @Data
@@ -231,15 +254,32 @@ public class RecruiterController {
         private String country;
         private Integer age;
         private String designation;
+        private SubscriptionResponse subscription;
 
+    }
+
+    @Data
+    public static class SubscriptionResponse {
+        private String id;
+        private SubscriptionPlanType type;
+        private SubscriptionStatus status;
+        private Long priceInPaise;
+        private Integer durationDays;
+        private String description;
+        private Instant startDate;
+        private Instant endDate;
     }
 
     @Data
     public static class RecruiterOverview {
         private Integer totalJobs;
+        private Integer totalApplications;
         private Integer totalCandidates;
         private Integer totalResumes;
         private Integer activeJobs;
+        private Integer selected;
+        private Integer rejected;
+        private Integer recruiterReview;
     }
 
     @Data
@@ -277,5 +317,14 @@ public class RecruiterController {
         private String message;
         private String title;
         private String relativeId;
+    }
+
+    @Data
+    public static class RecruiterPipeline{
+        private Integer jobApplication;
+        private Integer AiShortlist;
+        private Integer testScheduled;
+        private Integer interviewScheduled;
+        private Integer underRecruiterReview;
     }
 }

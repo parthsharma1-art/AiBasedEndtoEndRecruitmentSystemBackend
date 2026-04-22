@@ -5,7 +5,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.aibackend.AiBasedEndtoEndSystem.entity.*;
+import com.aibackend.AiBasedEndtoEndSystem.util.PasswordUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -26,13 +29,10 @@ import com.aibackend.AiBasedEndtoEndSystem.controller.RecruiterController;
 import com.aibackend.AiBasedEndtoEndSystem.controller.RecruiterController.CandidateDetails;
 import com.aibackend.AiBasedEndtoEndSystem.controller.RecruiterController.RecruiterOverview;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
-import com.aibackend.AiBasedEndtoEndSystem.entity.Candidate;
-import com.aibackend.AiBasedEndtoEndSystem.entity.CompanyProfile;
-import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
-import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
 import com.aibackend.AiBasedEndtoEndSystem.exception.HrException;
 import com.aibackend.AiBasedEndtoEndSystem.repository.RecruiterRepository;
+import com.aibackend.AiBasedEndtoEndSystem.repository.SubscriptionPlanRepository;
 import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
 import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtility;
 
@@ -58,16 +58,23 @@ public class RecruiterService {
     @Autowired
     private CompanyProfileService companyProfileService;
     @Autowired
+    @Lazy
     private JobPostingService jobPostingService;
     @Autowired
     private FileStorageService fileStorageService;
     @Autowired
     private CandidateService candidateService;
+    @Autowired
+    @Lazy
+    private JobApplicationService jobApplicationService;
+    @Autowired
+    private SubscriptionPlanRepository subscriptionPlanRepository;
 
     public UserDTO createNewRecruiter(RecruiterController.RecruiterRequest request, MultipartFile profileImage,
             MultipartFile idCard) {
         Recruiter recruiter = new Recruiter();
         validateRequest(request);
+        validatePassword(request);
         Optional<Recruiter> existing = repository.findByMobileNumber(request.getMobileNumber());
         if (existing.isPresent()) {
             return userService.toRecruiterDTO(existing.get());
@@ -93,6 +100,10 @@ public class RecruiterService {
             String idCardId = fileStorageService.storeFile(idCard);
             recruiter.setIdCardFileId(idCardId);
         }
+        String password = request.getPassword();
+        String confirmPassword = request.getConfirmPassword();
+        recruiter.setPassword(PasswordUtil.hashPassword(password));
+        recruiter.setConfirmPassword(PasswordUtil.hashPassword(confirmPassword));
 
         recruiter = save(recruiter);
         CompanyProfileController.CompanyProfileResponse resoponse = companyProfileService
@@ -142,6 +153,19 @@ public class RecruiterService {
         }
     }
 
+    private void validatePassword(RecruiterController.RecruiterRequest request) {
+        if (ObjectUtils.isEmpty(request.getPassword())) {
+            throw new HrException("Recruiter Password is required");
+        }
+        if (ObjectUtils.isEmpty(request.getDesignation())) {
+            throw new HrException("Recruiter Confirm Password is required");
+        }
+        log.info("Pass and confirm password :{} {}", request.getPassword(), request.getConfirmPassword());
+        if (!request.getPassword().equals(request.getConfirmPassword())) {
+            throw new BadException("Password and confirm password should be same");
+        }
+    }
+
     public Recruiter findById(String id) {
         log.info("Get Hr BY id : {}", id);
         return repository.findById(id).orElse(null);
@@ -150,15 +174,18 @@ public class RecruiterService {
     public UserDTO getUserLogin(PublicController.LoginRequest request) {
         log.info("User mobile Number :{}", request);
         Optional<Recruiter> recruiter = null;
-        if (!ObjectUtils.isEmpty(request.getMobileNumber())) {
-            recruiter = repository.findByMobileNumber(request.getMobileNumber());
-        } else {
-            recruiter = repository.findByEmail(request.getEmail());
-        }
+        recruiter = repository.findByEmail(request.getEmail());
         if (recruiter.isPresent()) {
-            return userService.toRecruiterDTO(recruiter.get());
+            String password = request.getPassword();
+            String hashedPassword = recruiter.get().getPassword();
+            Boolean value = PasswordUtil.matchPassword(password, hashedPassword);
+            if (value) {
+                return userService.toRecruiterDTO(recruiter.get());
+            } else {
+                throw new BadException("Password not match");
+            }
         }
-        return null;
+        throw new BadException("Invalid login");
 
     }
 
@@ -279,6 +306,21 @@ public class RecruiterService {
             }
         }
         response.setDesignation(recruiter.getDesignation());
+        Optional<SubscriptionPlan> subscriptionOpt = subscriptionPlanRepository.findByRecruiterId(recruiter.getId());
+        if (subscriptionOpt.isPresent()) {
+            SubscriptionPlan subscriptionPlan = subscriptionOpt.get();
+            RecruiterController.SubscriptionResponse subscriptionResponse =
+                    new RecruiterController.SubscriptionResponse();
+            subscriptionResponse.setId(subscriptionPlan.getId());
+            subscriptionResponse.setType(subscriptionPlan.getType());
+            subscriptionResponse.setStatus(subscriptionPlan.getStatus());
+            subscriptionResponse.setPriceInPaise(subscriptionPlan.getPriceInPaise());
+            subscriptionResponse.setDurationDays(subscriptionPlan.getDurationDays());
+            subscriptionResponse.setDescription(subscriptionPlan.getDescription());
+            subscriptionResponse.setStartDate(subscriptionPlan.getStartDate());
+            subscriptionResponse.setEndDate(subscriptionPlan.getEndDate());
+            response.setSubscription(subscriptionResponse);
+        }
         log.info("Response :{}", response);
         return response;
     }
@@ -290,7 +332,7 @@ public class RecruiterService {
             log.info("No recruiter found");
             throw new BadException("Recruiter not found with this id " + user.getId());
         }
-        if (!ObjectUtils.isEmpty(recruiter) && !recruiter.getId().equals(user.getId())) {
+        if (!recruiter.getId().equals(user.getId())) {
             log.error("Unauthorize access to the Recruiter Dashboard:{}", user);
             throw new BadException("Unauthorize access to the Recruiter Dashboard ");
         }
@@ -300,22 +342,55 @@ public class RecruiterService {
             throw new BadException("Company profile not found for the recruiter " + recruiter.getId());
         }
         List<JobPostings> jobPostings = jobPostingService.getAllJobPostings(recruiter);
+        if (jobPostings.isEmpty()) {
+            return null;
+        }
         RecruiterOverview recruiterOverview = new RecruiterOverview();
         Integer activeJobs = 0;
         Integer totalJobs = 0;
+        int totalApplications = 0;
+        int rejectedApplications = 0;
+        int totalCandidates = 0;
+        int selected = 0;
+        int totalRecruiterReview = 0;
         for (JobPostings postings : jobPostings) {
             if (postings.isActive()) {
                 activeJobs++;
             }
             totalJobs++;
+            List<JobApplications> jobApplications = jobApplicationService.getAllJobApplicationsDetails(postings);
+            if (jobApplications != null) {
+                totalApplications += jobApplications.size();
+                for (JobApplications application : jobApplications) {
+                    if (JobApplications.JobStatus.REJECTED.equals(application.getStatus())) {
+                        rejectedApplications++;
+                    }
+                    if (JobApplications.JobStatus.TEST_SCHEDULED.equals(application.getStatus())
+                            || JobApplications.JobStatus.UNDER_RECRUITER_REVIEW.equals(application.getStatus())
+                            || JobApplications.JobStatus.INTERVIEW_SCHEDULED.equals(application.getStatus())
+                            || JobApplications.JobStatus.SHORTLISTED.equals(application.getStatus())) {
+
+                        selected++;
+                    }
+                    if (JobApplications.JobStatus.UNDER_RECRUITER_REVIEW.equals(application.getStatus())) {
+                        totalRecruiterReview++;
+                    }
+                }
+            }
+
         }
+        totalCandidates = totalApplications;
         recruiterOverview.setActiveJobs(activeJobs);
         recruiterOverview.setTotalJobs(totalJobs);
+        recruiterOverview.setTotalApplications(totalApplications);
+        recruiterOverview.setTotalCandidates(totalCandidates);
+        recruiterOverview.setRejected(rejectedApplications);
+        recruiterOverview.setSelected(selected);
         return recruiterOverview;
     }
 
     public Recruiter getRecruiterById(String id) {
-        log.info("Get recruiter id :{}", id);
+        log.info("Get recruiter by id :{}", id);
         Optional<Recruiter> recruiter = repository.findById(id);
         if (recruiter.isEmpty()) {
             return null;
@@ -418,4 +493,27 @@ public class RecruiterService {
         return details;
     }
 
+    public Boolean updateRecruiterPassword(UserDTO user, RecruiterController.UpdatePasswordRequest request) {
+        log.info("Updating password for the Recruiter ID :{}", user.getId());
+        if (ObjectUtils.isEmpty(request)) {
+            throw new BadException("Update Password Request is required");
+        }
+        if (ObjectUtils.isEmpty(request.getNewPassword())) {
+            throw new BadException("New Password Request is required");
+        }
+        if (ObjectUtils.isEmpty(request.getConfirmPassword())) {
+            throw new BadException("Confirm Password is required");
+        }
+        Recruiter recruiter = getRecruiterById(user.getId());
+        log.info("Logged in Recruiter is :{}", recruiter);
+        if (ObjectUtils.isEmpty(recruiter)) {
+            throw new BadException("Recruiter not found for the id " + user.getId());
+        }
+        String password = request.getNewPassword();
+        String confirmPassword = request.getConfirmPassword();
+        recruiter.setPassword(PasswordUtil.hashPassword(password));
+        recruiter.setConfirmPassword(PasswordUtil.hashPassword(confirmPassword));
+        save(recruiter);
+        return Boolean.TRUE;
+    }
 }

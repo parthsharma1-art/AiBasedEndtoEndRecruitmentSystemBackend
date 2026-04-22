@@ -55,7 +55,13 @@ public class SecurityConfig {
                                 "/public/**",
                                 "/recruiter/**",
                                 "/candidate/**",
-                                "/file/**"   // important
+                                "/file/**"  ,
+                                "/api/auth/**",
+                                "/auth/**",
+                                "/test/**",
+                                "/api/checkout/**",
+                                "/api/webhook/**",
+                                "/webhook/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

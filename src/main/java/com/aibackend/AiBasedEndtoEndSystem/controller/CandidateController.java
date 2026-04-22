@@ -2,7 +2,9 @@ package com.aibackend.AiBasedEndtoEndSystem.controller;
 
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
+import com.aibackend.AiBasedEndtoEndSystem.dto.CandidateResumeAtsEvaluationResponse;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Chat;
+import com.aibackend.AiBasedEndtoEndSystem.service.CandidateResumeAtsService;
 import com.aibackend.AiBasedEndtoEndSystem.service.ChatService;
 import com.aibackend.AiBasedEndtoEndSystem.service.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.aibackend.AiBasedEndtoEndSystem.config.AuthAppConfig;
+import com.aibackend.AiBasedEndtoEndSystem.dto.CandidateDashboardResponse;
 import com.aibackend.AiBasedEndtoEndSystem.dto.CandidateRequest;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Candidate;
@@ -43,6 +46,8 @@ public class CandidateController {
     private ChatService chatService;
     @Autowired
     private NotificationService notificationService;
+    @Autowired
+    private CandidateResumeAtsService candidateResumeAtsService;
 
     @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public PublicController.UserResponse createNewCandidate(
@@ -58,7 +63,7 @@ public class CandidateController {
 
     @PostMapping("/login")
     public PublicController.UserResponse login(@RequestBody PublicController.LoginRequest request) throws Exception {
-        UserDTO user = candidateService.getCandidateByMobileNumber(request);
+        UserDTO user = candidateService.getCandidateByEmailAndPassword(request);
         user.setRole("Candidate");
         JwtUtil.Token token = jwtUtil.generateClientToken(user);
         log.info("The token generated for login :{}", token);
@@ -71,6 +76,15 @@ public class CandidateController {
         if (user == null)
             throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
         return toCandidateRespone(candidateService.findById(user.getId()));
+    }
+
+    @GetMapping("/dashboard")
+    public CandidateDashboardResponse getCandidateDashboard() {
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null) {
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        }
+        return candidateService.getCandidateDashboard(user);
     }
 
     public CandidateResponse toCandidateRespone(Candidate candidate) {
@@ -90,7 +104,7 @@ public class CandidateController {
         UserDTO user = SecurityUtils.getLoggedInUser();
         if (user == null)
             throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
-        return chatService.createOrUpdateChat(user,request, Chat.Source.CANDIDATE);
+        return chatService.createOrUpdateChat(user, request, Chat.Source.CANDIDATE);
     }
 
     @GetMapping("/chats/{id}")
@@ -98,8 +112,8 @@ public class CandidateController {
         UserDTO user = SecurityUtils.getLoggedInUser();
         if (user == null)
             throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
-        log.info("Get chat for the user :{}",id);
-        return chatService.getChats(user,id);
+        log.info("Get chat for the user :{}", id);
+        return chatService.getChats(user, id);
     }
 
     @GetMapping("/chats")
@@ -107,7 +121,7 @@ public class CandidateController {
         UserDTO user = SecurityUtils.getLoggedInUser();
         if (user == null)
             throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
-        log.info("Get all chats for the user :{}",user);
+        log.info("Get chats for the candidate :{}", user);
         return chatService.getAllChats(user, Chat.Source.CANDIDATE);
     }
 
@@ -126,7 +140,13 @@ public class CandidateController {
         if (user == null)
             throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
         log.info("Get notifications for the user :{}", user);
-        return notificationService.markReadNotification(user,id);
+        return notificationService.markReadNotification(user, id);
+    }
+
+    @PostMapping("/notification/mark-all-read")
+    public Boolean markAllReadyNotification() {
+        UserDTO userDTO = SecurityUtils.getLoggedInUser();
+        return notificationService.markAllRead(userDTO);
     }
 
     @Data
@@ -186,8 +206,8 @@ public class CandidateController {
 
     @PutMapping(value = "/update", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public PublicController.UserResponse updateCandidate(@ModelAttribute CandidateRequest request,
-            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
-            @RequestPart(value = "resume", required = false) MultipartFile resume) {
+                                                         @RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
+                                                         @RequestPart(value = "resume", required = false) MultipartFile resume) {
         log.info("Update Candidate Details :{}", request);
         UserDTO user = SecurityUtils.getLoggedInUser();
         if (user == null)
@@ -196,6 +216,36 @@ public class CandidateController {
         candidateDto.setRole("Candidate");
         JwtUtil.Token jwtToken = jwtUtil.generateClientToken(candidateDto);
         return publicController.toUserResponse(candidateDto, jwtToken);
+    }
+
+    @PutMapping("/update-password")
+    public Boolean updateRecruiterPassword(@RequestBody RecruiterController.UpdatePasswordRequest request) {
+        UserDTO userDTO = SecurityUtils.getLoggedInUser();
+        return candidateService.updateCandidatePassword(userDTO, request);
+    }
+
+    @PostMapping("/shortlisted/start")
+    public void startTest(){
+        
+    }
+
+    @PostMapping(value = "/resume/ats-score", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public CandidateResumeAtsEvaluationResponse evaluateResumeAtsScore(
+            @RequestPart("resume") MultipartFile resume) {
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null) {
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        }
+        return candidateResumeAtsService.evaluateAndSave(user.getId(), resume);
+    }
+
+    @GetMapping(value = "/resume/ats-score")
+    public List<CandidateResumeAtsEvaluationResponse> getEvaluateResumeAtsScore() {
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null) {
+            throw new ResponseStatusException(UNAUTHORIZED, "Not authenticated");
+        }
+        return candidateResumeAtsService.getEvaluations(user.getId());
     }
 
 }
