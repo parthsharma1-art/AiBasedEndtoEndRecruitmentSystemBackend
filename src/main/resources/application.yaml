@@ -1,16 +1,16 @@
 spring:
   data:
     mongodb:
-      uri: mongodb+srv://parthsharma2640:7817971083%40ps@cluster0.du0knbh.mongodb.net/?retryWrites=true&w=majority
+      uri: ${MONGODB_URI}
       database: aibasedendtoendsystem
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6380}
   servlet:
     multipart:
       enabled: true
       max-file-size: 50MB
       max-request-size: 100MB
-    redis:
-      host: localhost
-      port: 6380
   cache:
     type: redis
 UPSTASH_REDIS_REST_URL: ${REDIS_URL}

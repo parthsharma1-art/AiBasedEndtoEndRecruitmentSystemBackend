@@ -26,7 +26,7 @@ public class CronJobService {
     @Value("${ai-service.base-url}")
     private String aiServiceBaseUrl;
 
-    // @Scheduled(cron = "${cron.job.time:0 0 */14 * * *}")
+    @Scheduled(cron = "${cron.job.time:0 0 */14 * * *}")
     public void sendScheduledMessages() {
         log.info("Started calculating sum value:{}", Instant.now());
         int sum = 0;
@@ -38,7 +38,7 @@ public class CronJobService {
         log.info("Completed calculating sum value");
     }
 
-    // @Scheduled(cron = "${cron.job.shortlistEvaluation.time:0 */8 * * * *}")
+    @Scheduled(cron = "${cron.job.shortlistEvaluation.time:0 */8 * * * *}")
     public void scheduledShortlistEvaluationNotificationsAndStatusUpdates() {
         log.info("scheduledShortlistEvaluationNotificationsAndStatusUpdates started at {}", Instant.now());
         try {
@@ -59,7 +59,7 @@ public class CronJobService {
         }
     }
 
-    // @Scheduled(cron = "${cron.job.aiServiceKeepAlive.time:0 */4 * * * *}")
+    @Scheduled(cron = "${cron.job.aiServiceKeepAlive.time:0 */4 * * * *}")
     public void keepAiServiceAlive() {
         try {
             log.info("AI service keep-alive ping sent to {}", aiServiceBaseUrl);
