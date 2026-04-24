@@ -30,6 +30,8 @@ app:
   auth:
     otp:
       ttl-minutes: 10
+      # JVM memory OTP if Redis fails; single-instance only. Prod: fix REDIS_URL (use rediss:// for Upstash).
+      memory-fallback-when-redis-unavailable: ${OTP_MEMORY_FALLBACK:false}
   oauth2:
     client:
       registration:

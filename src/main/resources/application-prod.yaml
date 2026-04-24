@@ -22,6 +22,8 @@ app:
   auth:
     otp:
       ttl-minutes: 10
+      # Single Render dyno: OTP works if Redis is down. Set false when REDIS_URL is correct (rediss://) or you scale horizontally.
+      memory-fallback-when-redis-unavailable: ${OTP_MEMORY_FALLBACK:true}
   oauth2:
     client:
       registration:

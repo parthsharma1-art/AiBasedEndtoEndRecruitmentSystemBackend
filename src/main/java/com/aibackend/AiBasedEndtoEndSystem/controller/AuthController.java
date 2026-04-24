@@ -40,6 +40,8 @@ public class AuthController {
             log.info("OTP is :{}", otp);
             emailService.sendHtmlEmail(email, otp);
             return Boolean.TRUE;
+        } catch (BadException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Error occurred while sending otp :{}", e.getMessage());
             throw new BadException("Some error occurred while sending otp");
