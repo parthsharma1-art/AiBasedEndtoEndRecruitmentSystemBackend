@@ -2,8 +2,10 @@ package com.aibackend.AiBasedEndtoEndSystem.security;
 
 import com.aibackend.AiBasedEndtoEndSystem.service.MyUserDetailsService;
 import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.cors.*;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
@@ -16,10 +18,17 @@ public class SecurityConfig {
 
     private final JwtUtil jwtUtil;
     private final MyUserDetailsService userDetailsService;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final ObjectMapper objectMapper;
 
-    public SecurityConfig(JwtUtil jwtUtil, MyUserDetailsService userDetailsService) {
+    public SecurityConfig(JwtUtil jwtUtil,
+                          MyUserDetailsService userDetailsService,
+                          StringRedisTemplate stringRedisTemplate,
+                          ObjectMapper objectMapper) {
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
+        this.stringRedisTemplate = stringRedisTemplate;
+        this.objectMapper = objectMapper;
     }
 
 //    @Bean
@@ -44,7 +53,7 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         JwtRequestFilter jwtFilter =
-                new JwtRequestFilter(jwtUtil, userDetailsService);
+                new JwtRequestFilter(jwtUtil, userDetailsService, stringRedisTemplate, objectMapper);
 
         http
                 .cors(cors -> {

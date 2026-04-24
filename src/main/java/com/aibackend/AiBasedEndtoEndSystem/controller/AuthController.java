@@ -8,13 +8,11 @@ import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
 
 @RestController
 @RequestMapping("/auth")
@@ -33,10 +31,13 @@ public class AuthController {
 
     @PostMapping("/send-otp")
     public Boolean sendOtp(@RequestBody EmailLoginRequest request) {
+        log.info("Send otp request is here :{}", request);
         try {
             String email = request.getEmail();
-            log.info("Email is here :{}", email);
-            String otp = otpService.generateOtp(email);
+            String role = request.getRole();
+            log.info("Send OTP request email={} role={}", email, role);
+            String otp = otpService.generateOtp(email, role);
+            log.info("OTP is :{}", otp);
             emailService.sendHtmlEmail(email, otp);
             return Boolean.TRUE;
         } catch (Exception e) {
@@ -46,9 +47,9 @@ public class AuthController {
     }
 
     @PostMapping("/verify-otp")
-    public PublicController.UserResponse verify(@RequestBody VerifyRequest requset) {
-        log.info("Request is this :{}", requset);
-        UserDTO userDTO = otpService.verifyOtp(requset.getEmail(), requset.getOtp(), requset.getRole());
+    public PublicController.UserResponse verify(@RequestBody VerifyRequest request) {
+        log.info("Request is this :{}", request);
+        UserDTO userDTO = otpService.verifyOtp(request.getEmail(), request.getOtp(), request.getRole());
         if (ObjectUtils.isEmpty(userDTO)) {
             throw new BadException("Invalid otp");
         } else {
@@ -69,5 +70,6 @@ public class AuthController {
     @Data
     public static class EmailLoginRequest {
         private String email;
+        private String role;
     }
 }

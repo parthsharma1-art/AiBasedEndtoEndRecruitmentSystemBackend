@@ -1,104 +1,10 @@
-//package com.aibackend.AiBasedEndtoEndSystem.security;
-//
-//import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
-//import com.aibackend.AiBasedEndtoEndSystem.entity.Candidate;
-//import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
-//import com.aibackend.AiBasedEndtoEndSystem.entity.User;
-//import com.aibackend.AiBasedEndtoEndSystem.service.MyUserDetailsService;
-//import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
-//import io.jsonwebtoken.Claims;
-//import lombok.extern.slf4j.Slf4j;
-//import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-//import org.springframework.security.core.context.SecurityContextHolder;
-//import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
-//import org.springframework.stereotype.Component;
-//import org.springframework.web.filter.OncePerRequestFilter;
-//
-//import jakarta.servlet.FilterChain;
-//import jakarta.servlet.ServletException;
-//import jakarta.servlet.http.HttpServletRequest;
-//import jakarta.servlet.http.HttpServletResponse;
-//
-//import java.io.IOException;
-//import java.util.Collections;
-//
-//@Component
-//@Slf4j
-//public class JwtRequestFilter extends OncePerRequestFilter {
-//
-//    private final JwtUtil jwtUtil;
-//    private final MyUserDetailsService userService;
-//
-//    public JwtRequestFilter(JwtUtil jwtUtil, MyUserDetailsService userService) {
-//        this.jwtUtil = jwtUtil;
-//        this.userService = userService;
-//    }
-//
-//    @Override
-//    protected void doFilterInternal(HttpServletRequest request,
-//                                    HttpServletResponse response,
-//                                    FilterChain filterChain)
-//            throws ServletException, IOException {
-//
-//        final String authHeader = request.getHeader("Authorization");
-//        String jwt = null;
-//        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-//            jwt = authHeader.substring(7);
-//        }
-//        if (jwt != null) {
-//            try {
-//                Claims claims = jwtUtil.extractAllClaims(jwt);
-//                log.info("ALL CLAIMS: {}", claims);
-//                if (claims != null) {
-//                    String userId = claims.getSubject().trim();
-//                    String role = claims.get("role", String.class);
-//                    log.info("Id for the user is :{}", userId);
-//                    log.info("Role :{}", role);
-//                    Object userEntity = switch (role) {
-//                        case "User", "USER" -> userService.loadUserEntityById(userId);
-//                        case "Candidate" -> userService.loadCandidateById(userId);
-//                        case "Recruiter" -> userService.loadRecruiterById(userId);
-//                        default -> throw new RuntimeException("Invalid role in token");
-//                    };
-//                    UserDTO userDTO = new UserDTO();
-//                    userDTO.setId(userId);
-//                    userDTO.setRole(role);
-//                    if (userEntity instanceof User u) {
-//                        userDTO.setUsername(u.getName());
-//                        userDTO.setUserEmail(u.getEmail());
-//                    }
-//                    if (userEntity instanceof Candidate c) {
-//                        userDTO.setUsername(c.getName());
-//                        userDTO.setUserEmail(c.getEmail());
-//                    }
-//                    if (userEntity instanceof Recruiter r) {
-//                        userDTO.setUsername(r.getName());
-//                        userDTO.setUserEmail(r.getEmail());
-//                    }
-//
-//                    UsernamePasswordAuthenticationToken authToken =
-//                            new UsernamePasswordAuthenticationToken(
-//                                    userDTO,
-//                                    null,
-//                                    Collections.emptyList()
-//                            );
-//
-//                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-//                    SecurityContextHolder.getContext().setAuthentication(authToken);
-//                }
-//            } catch (Exception e) {
-//                log.error("JWT authentication failed: {}", e.getMessage());
-//            }
-//        }
-//
-//        filterChain.doFilter(request, response);
-//    }
-//}
 
 
 package com.aibackend.AiBasedEndtoEndSystem.security;
 
 import java.io.IOException;
+import java.time.Duration;
+import java.util.Locale;
 import java.util.List;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -106,7 +12,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Candidate;
@@ -114,6 +22,8 @@ import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
 import com.aibackend.AiBasedEndtoEndSystem.entity.User;
 import com.aibackend.AiBasedEndtoEndSystem.service.MyUserDetailsService;
 import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -126,13 +36,22 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 @Slf4j
 public class JwtRequestFilter extends OncePerRequestFilter {
+    private static final String AUTH_USER_CACHE_PREFIX = "auth:userDTO:";
+    private static final Duration AUTH_USER_CACHE_TTL = Duration.ofDays(1);
 
     private final JwtUtil jwtUtil;
     private final MyUserDetailsService userService;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final ObjectMapper objectMapper;
 
-    public JwtRequestFilter(JwtUtil jwtUtil, MyUserDetailsService userService) {
+    public JwtRequestFilter(JwtUtil jwtUtil,
+                            MyUserDetailsService userService,
+                            StringRedisTemplate stringRedisTemplate,
+                            ObjectMapper objectMapper) {
         this.jwtUtil = jwtUtil;
         this.userService = userService;
+        this.stringRedisTemplate = stringRedisTemplate;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -153,28 +72,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                 String role = claims.get("r", String.class);
 
                 if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-
-                    Object userEntity = switch (role.toLowerCase()) {
-                        case "user" -> userService.loadUserEntityById(userId);
-                        case "candidate" -> userService.loadCandidateById(userId);
-                        case "recruiter" -> userService.loadRecruiterById(userId);
-                        default -> throw new RuntimeException("Invalid role in JWT");
-                    };
-
-                    UserDTO userDTO = new UserDTO();
-                    userDTO.setId(userId);
-                    userDTO.setRole(role);
-
-                    if (userEntity instanceof User u) {
-                        userDTO.setUsername(u.getName());
-                        userDTO.setUserEmail(u.getEmail());
-                    } else if (userEntity instanceof Candidate c) {
-                        userDTO.setUsername(c.getName());
-                        userDTO.setUserEmail(c.getEmail());
-                    } else if (userEntity instanceof Recruiter r) {
-                        userDTO.setUsername(r.getName());
-                        userDTO.setUserEmail(r.getEmail());
-                    }
+                    UserDTO userDTO = getUserContextFromCacheOrDb(userId, role);
 
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(
@@ -206,5 +104,62 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private UserDTO getUserContextFromCacheOrDb(String userId, String role) {
+        String normalizedRole = normalizeRole(role);
+        String redisKey = AUTH_USER_CACHE_PREFIX + normalizedRole + ":" + userId;
+
+        String cachedUserJson = stringRedisTemplate.opsForValue().get(redisKey);
+        if (StringUtils.hasText(cachedUserJson)) {
+            try {
+                log.info("Already exist in cache");
+                return objectMapper.readValue(cachedUserJson, UserDTO.class);
+            } catch (JsonProcessingException e) {
+                log.warn("Failed to parse cached auth user context for key {}. Falling back to DB.", redisKey);
+                stringRedisTemplate.delete(redisKey);
+            }
+        }
+
+        Object userEntity = switch (normalizedRole) {
+            case "user" -> userService.loadUserEntityById(userId);
+            case "candidate" -> userService.loadCandidateById(userId);
+            case "recruiter" -> userService.loadRecruiterById(userId);
+            default -> throw new RuntimeException("Invalid role in JWT");
+        };
+
+        UserDTO userDTO = new UserDTO();
+        userDTO.setId(userId);
+        userDTO.setRole(role);
+
+        if (userEntity instanceof User u) {
+            userDTO.setUsername(u.getName());
+            userDTO.setUserEmail(u.getEmail());
+        } else if (userEntity instanceof Candidate c) {
+            userDTO.setUsername(c.getName());
+            userDTO.setUserEmail(c.getEmail());
+        } else if (userEntity instanceof Recruiter r) {
+            userDTO.setUsername(r.getName());
+            userDTO.setUserEmail(r.getEmail());
+        }
+
+        try {
+            stringRedisTemplate.opsForValue().set(
+                    redisKey,
+                    objectMapper.writeValueAsString(userDTO),
+                    AUTH_USER_CACHE_TTL
+            );
+        } catch (JsonProcessingException e) {
+            log.warn("Failed to cache auth user context for key {}.", redisKey);
+        }
+
+        return userDTO;
+    }
+
+    private String normalizeRole(String role) {
+        if (!StringUtils.hasText(role)) {
+            throw new RuntimeException("Role is missing in JWT");
+        }
+        return role.toLowerCase(Locale.ROOT);
     }
 }

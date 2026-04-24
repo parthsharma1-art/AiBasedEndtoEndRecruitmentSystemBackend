@@ -1,4 +1,5 @@
 package com.aibackend.AiBasedEndtoEndSystem.controller;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.aibackend.AiBasedEndtoEndSystem.config.RedisConfig;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications.JobStatus;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
@@ -26,6 +28,20 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/test/shortlist-evaluate")
 @Slf4j
 public class TestController {
+
+    private final RedisConfig redisConfig;
+
+    public TestController(CacheCommonService cacheCommonService, RedisConfig redisConfig) {
+        this.cacheCommonService = cacheCommonService;
+        this.redisConfig = redisConfig;
+    }
+
+    @GetMapping("/test")
+    public String test() {
+        redisConfig.set("name", "Parth Sharma");
+        return redisConfig.get("name");
+    }
+
     @Autowired
     private AiResumeEvaluatingService aiResumeEvaluatingService;
     @Autowired
@@ -36,9 +52,9 @@ public class TestController {
     @Autowired
     private CacheCommonService cacheCommonService;
 
-    public TestController(CacheCommonService cacheCommonService) {
-        this.cacheCommonService = cacheCommonService;
-    }
+    // public TestController(CacheCommonService cacheCommonService) {
+    //     this.cacheCommonService = cacheCommonService;
+    // }
 
     @GetMapping("/{id}")
     public User test(@PathVariable String id) {

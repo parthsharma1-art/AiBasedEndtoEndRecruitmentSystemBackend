@@ -11,4 +11,6 @@ public interface CandidateRepository extends MongoRepository<Candidate, String> 
 
     Optional<Candidate> findByMobileNumber(String mobileNumber);
     Optional<Candidate> findByEmail(String email);
+
+    Optional<Candidate> findByEmailIgnoreCase(String email);
 }
