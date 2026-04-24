@@ -197,6 +197,10 @@ public class RecruiterService {
         return null;
     }
 
+    public Recruiter findByEmailIgnoreCaseForOtp(String normalizedEmail) {
+        return repository.findByEmailIgnoreCase(normalizedEmail).orElse(null);
+    }
+
     public PublicController.UserResponse googleHostCallback(String code) {
         try {
             MultiValueMap<String, String> params = new LinkedMultiValueMap<>();

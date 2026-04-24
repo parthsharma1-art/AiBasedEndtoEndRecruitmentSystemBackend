@@ -1,20 +1,24 @@
 package com.aibackend.AiBasedEndtoEndSystem.controller;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.ObjectUtils;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import com.aibackend.AiBasedEndtoEndSystem.config.RedisConfig;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications;
+import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications.JobStatus;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobPostings;
 import com.aibackend.AiBasedEndtoEndSystem.entity.ShortlistEvaluationResult;
-import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications.JobStatus;
+import com.aibackend.AiBasedEndtoEndSystem.entity.User;
 import com.aibackend.AiBasedEndtoEndSystem.service.AiResumeEvaluatingService;
+import com.aibackend.AiBasedEndtoEndSystem.service.CacheCommonService;
 import com.aibackend.AiBasedEndtoEndSystem.service.JobApplicationService;
 import com.aibackend.AiBasedEndtoEndSystem.service.JobPostingService;
 
@@ -24,12 +28,38 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/test/shortlist-evaluate")
 @Slf4j
 public class TestController {
+
+    private final RedisConfig redisConfig;
+
+    public TestController(CacheCommonService cacheCommonService, RedisConfig redisConfig) {
+        this.cacheCommonService = cacheCommonService;
+        this.redisConfig = redisConfig;
+    }
+
+    @GetMapping("/test")
+    public String test() {
+        redisConfig.set("name", "Parth Sharma");
+        return redisConfig.get("name");
+    }
+
     @Autowired
     private AiResumeEvaluatingService aiResumeEvaluatingService;
     @Autowired
     private JobApplicationService jobApplicationService;
     @Autowired
     private JobPostingService jobPostingService;
+
+    @Autowired
+    private CacheCommonService cacheCommonService;
+
+    // public TestController(CacheCommonService cacheCommonService) {
+    //     this.cacheCommonService = cacheCommonService;
+    // }
+
+    @GetMapping("/{id}")
+    public User test(@PathVariable String id) {
+        return cacheCommonService.getUserById(id);
+    }
 
     @PostMapping
     public List<ShortlistEvaluationResult> evaluateShortlistForAllJobApplications() {
