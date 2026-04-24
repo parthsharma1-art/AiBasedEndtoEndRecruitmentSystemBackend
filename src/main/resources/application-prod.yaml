@@ -10,7 +10,7 @@ spring:
       max-file-size: 50MB
       max-request-size: 100MB
 
-UPSTASH_REDIS_REST_URL: "https://glowing-cub-101521.upstash.io"
+UPSTASH_REDIS_REST_URL: ${REDIS_URL}
 UPSTASH_REDIS_REST_TOKEN: ${REDIS_REST_TOKEN}
 
 server:
