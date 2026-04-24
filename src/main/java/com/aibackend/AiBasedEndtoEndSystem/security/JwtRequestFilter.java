@@ -110,14 +110,23 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         String normalizedRole = normalizeRole(role);
         String redisKey = AUTH_USER_CACHE_PREFIX + normalizedRole + ":" + userId;
 
-        String cachedUserJson = stringRedisTemplate.opsForValue().get(redisKey);
+        String cachedUserJson = null;
+        try {
+            cachedUserJson = stringRedisTemplate.opsForValue().get(redisKey);
+        } catch (Exception e) {
+            log.warn("Redis unavailable while reading auth user context for key {}: {}", redisKey, e.getMessage());
+        }
+
         if (StringUtils.hasText(cachedUserJson)) {
             try {
-                log.info("Already exist in cache");
                 return objectMapper.readValue(cachedUserJson, UserDTO.class);
             } catch (JsonProcessingException e) {
                 log.warn("Failed to parse cached auth user context for key {}. Falling back to DB.", redisKey);
-                stringRedisTemplate.delete(redisKey);
+                try {
+                    stringRedisTemplate.delete(redisKey);
+                } catch (Exception redisDeleteException) {
+                    log.warn("Redis unavailable while deleting bad cache key {}: {}", redisKey, redisDeleteException.getMessage());
+                }
             }
         }
 
@@ -150,7 +159,9 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                     AUTH_USER_CACHE_TTL
             );
         } catch (JsonProcessingException e) {
-            log.warn("Failed to cache auth user context for key {}.", redisKey);
+            log.warn("Failed to serialize auth user context for key {}.", redisKey);
+        } catch (Exception e) {
+            log.warn("Redis unavailable while caching auth user context for key {}: {}", redisKey, e.getMessage());
         }
 
         return userDTO;

@@ -103,7 +103,6 @@ public class JwtUtil {
     }
 
     private void cacheUserContext(UserDTO userDTO) {
-        log.info("Storing User DTO in cache :{}");
         String normalizedRole = userDTO.getRole().toLowerCase(Locale.ROOT);
         String redisKey = AUTH_USER_CACHE_PREFIX + normalizedRole + ":" + userDTO.getId();
         try {
@@ -113,7 +112,9 @@ public class JwtUtil {
                     AUTH_USER_CACHE_TTL
             );
         } catch (JsonProcessingException e) {
-            log.warn("Failed to cache auth user context for key {}.", redisKey);
+            log.warn("Failed to serialize auth user context for key {}.", redisKey);
+        } catch (Exception e) {
+            log.warn("Redis unavailable while caching auth user context for key {}: {}", redisKey, e.getMessage());
         }
     }
 }
