@@ -5,6 +5,8 @@ spring:
       database: aibasedendtoendsystem
     redis:
       url: ${REDIS_URL}
+      ssl:
+        enabled: true
   cache:
     type: redis
 

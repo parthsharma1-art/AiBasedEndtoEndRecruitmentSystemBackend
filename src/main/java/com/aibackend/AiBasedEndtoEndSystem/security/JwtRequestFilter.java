@@ -113,12 +113,14 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         String cachedUserJson = null;
         try {
             cachedUserJson = stringRedisTemplate.opsForValue().get(redisKey);
+            log.info("Cached user context for key {}: {}", redisKey, cachedUserJson);
         } catch (Exception e) {
             log.warn("Redis unavailable while reading auth user context for key {}: {}", redisKey, e.getMessage());
         }
 
         if (StringUtils.hasText(cachedUserJson)) {
             try {
+                log.info("Parsing cached user context for key {}: {}", redisKey, cachedUserJson);
                 return objectMapper.readValue(cachedUserJson, UserDTO.class);
             } catch (JsonProcessingException e) {
                 log.warn("Failed to parse cached auth user context for key {}. Falling back to DB.", redisKey);
@@ -129,7 +131,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                 }
             }
         }
-
+        log.info("Loading user context from DB for role: {}", normalizedRole);
         Object userEntity = switch (normalizedRole) {
             case "user" -> userService.loadUserEntityById(userId);
             case "candidate" -> userService.loadCandidateById(userId);
