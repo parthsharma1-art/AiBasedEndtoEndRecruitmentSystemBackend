@@ -4,11 +4,18 @@ spring:
       uri: ${MONGODB_URI}
       database: aibasedendtoendsystem
     redis:
-      url: ${REDIS_URL}
+      # Upstash TCP endpoint (TLS). Render env REDIS_URL must be the rediss:// URL, NOT the https:// REST URL.
+      url: ${REDIS_URL:rediss://default:gQAAAAAAAlF9AAIgcDI3NTkwMDRkNmE0NDA0YThjYjIwMzY4Yzc3MjgzOTE2Yw@modest-wombat-151933.upstash.io:6379}
       ssl:
         enabled: true
+      timeout: 5s
+      connect-timeout: 5s
   cache:
     type: redis
+
+# Upstash REST (HTTP) endpoint. Used only by RedisConfig.set/get (TestController).
+UPSTASH_REDIS_REST_URL: ${REDIS_REST_URL:https://modest-wombat-151933.upstash.io}
+UPSTASH_REDIS_REST_TOKEN: ${REDIS_REST_TOKEN:gQAAAAAAAlF9AAIgcDI3NTkwMDRkNmE0NDA0YThjYjIwMzY4Yzc3MjgzOTE2Yw}
 
   servlet:
     multipart:
