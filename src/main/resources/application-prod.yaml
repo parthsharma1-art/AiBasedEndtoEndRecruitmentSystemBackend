@@ -85,3 +85,11 @@ razorpay:
   key-id: ${RAZORPAY_KEY_ID}
   key-secret: ${RAZORPAY_KEY_SECRET}
   webhook-secret: ${RAZORPAY_WEBHOOK_SECRET}
+
+# Supabase Configuration for Real-time Notifications
+supabase:
+  enabled: ${SUPABASE_ENABLED:true}
+  # Supabase project URL
+  url: ${SUPABASE_URL}
+  # Supabase publishable API key (safe to expose publicly)
+  api-key: ${SUPABASE_API_KEY}
