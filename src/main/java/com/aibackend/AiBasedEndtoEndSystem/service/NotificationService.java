@@ -10,6 +10,7 @@ import com.aibackend.AiBasedEndtoEndSystem.repository.NotificationRepository;
 import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtility;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
@@ -28,6 +29,10 @@ public class NotificationService {
     @Autowired
     @Lazy
     private ChatService chatService;
+
+    @Autowired
+    @Lazy
+    private SupabaseNotificationService supabaseNotificationService;
 
     public void createNotification(Chat.Source source,
                                    String message,
@@ -56,6 +61,17 @@ public class NotificationService {
         notification.setCandidateId(chat.getCandidateId());
         notification.setSource(source);
         saveNotification(notification);
+        // Push to Supabase Realtime (fire-and-forget; MongoDB is the source of truth)
+        final String receiverId = notification.getReceiverId();
+        final String msgPreview = message;
+        final String chatId = chat.getId();
+        supabaseNotificationService.sendNotificationAsync(
+                receiverId,
+                "New Message",
+                msgPreview,
+                SupabaseNotificationService.TYPE_NEW_MESSAGE,
+                java.util.Map.of("chatId", chatId)
+        );
     }
 
 
@@ -124,6 +140,14 @@ public class NotificationService {
         notification.setCandidateId(candidate.getId());
         notification.setSource(Chat.Source.CANDIDATE);
         saveNotification(notification);
+        // Push to Supabase Realtime
+        supabaseNotificationService.sendNotificationAsync(
+                candidate.getId(),
+                "Job Application Submitted",
+                message,
+                SupabaseNotificationService.TYPE_APPLICATION_SUBMITTED,
+                java.util.Map.of("jobId", jobPostings.getId())
+        );
     }
 
     public void createAiScreeningResultNotification(
@@ -154,5 +178,16 @@ public class NotificationService {
         }
         saveNotification(notification);
         log.info("AI screening notification saved for candidate {} jobApplication {}", candidate.getId(), jobApplicationId);
+        // Push to Supabase Realtime
+        supabaseNotificationService.sendNotificationAsync(
+                candidate.getId(),
+                notification.getTitle(),
+                notification.getMessage(),
+                SupabaseNotificationService.TYPE_AI_SCREENING_RESULT,
+                java.util.Map.of(
+                        "jobId", job.getId(),
+                        "jobApplicationId", jobApplicationId != null ? jobApplicationId : ""
+                )
+        );
     }
 }

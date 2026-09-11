@@ -35,6 +35,9 @@ public class ChatService {
     @Autowired
     private NotificationService notificationService;
 
+    @Autowired
+    private SupabaseChatService supabaseChatService;
+
     public Chat createOrUpdateChat(UserDTO user, RecruiterController.ChatRequest request, Chat.Source source) {
         log.info("Creating or updating request if any :{}", request);
         Recruiter recruiter = recruiterService.getRecruiterById(request.getRecruiterId());
@@ -63,6 +66,8 @@ public class ChatService {
             chat.setUpdatedBy(user.getId());
             chat = save(chat);
             notificationService.createNotification(source, message, chat);
+            // Broadcast Supabase Realtime signal — frontend will re-fetch chat from Spring Boot
+            supabaseChatService.broadcastNewMessage(chat.getId(), user.getId(), source.name());
             return chat;
         }
         log.info("Creating new Chat for the request :{}", request);
@@ -86,6 +91,8 @@ public class ChatService {
         chat.setUpdatedBy(user.getId());
         chat = save(chat);
         notificationService.createNotification(source, message, chat);
+        // Broadcast Supabase Realtime signal — frontend will re-fetch chat from Spring Boot
+        supabaseChatService.broadcastNewMessage(chat.getId(), user.getId(), source.name());
         return chat;
 
     }

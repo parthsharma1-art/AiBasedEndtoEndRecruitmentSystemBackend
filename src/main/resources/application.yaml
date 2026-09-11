@@ -97,5 +97,19 @@ razorpay:
   key-secret: ${RAZORPAY_KEY_SECRET}
   webhook-secret: ${RAZORPAY_WEBHOOK_SECRET}
 
+# Supabase Configuration for Real-time Notifications and Chat
+supabase:
+  # Set to true to enable Supabase integration
+  enabled: ${SUPABASE_ENABLED:true}
+  # Supabase project URL (e.g., https://your-project.supabase.co)
+  url: ${SUPABASE_URL}
+  # Supabase service_role (secret) key — BACKEND ONLY, NEVER expose to frontend.
+  # Used for server-side REST API calls that bypass Row Level Security.
+  # Find in: Supabase Dashboard -> Settings -> API -> service_role key
+  service-role-key: ${SUPABASE_SERVICE_ROLE_KEY}
+  # Supabase JWT Secret — used by the backend to issue short-lived Supabase JWTs
+  # for the frontend to authenticate Realtime subscriptions.
+  # Find in: Supabase Dashboard -> Settings -> API -> JWT Secret
+  jwt-secret: ${SUPABASE_JWT_SECRET}
 
 
