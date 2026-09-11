@@ -15,7 +15,7 @@ public class SecurityUtils {
     /**
      * Returns the currently logged-in user from the SecurityContext (set by JwtRequestFilter).
      * Use this in controllers instead of reading the token from headers.
-     * Requires a valid JWT in the Authorization header — the filter populates the context.
+     * Requires a valid JWT in the Authorization header â€” the filter populates the context.
      */
     public static UserDTO getLoggedInUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();

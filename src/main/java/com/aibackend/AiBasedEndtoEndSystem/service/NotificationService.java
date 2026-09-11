@@ -168,7 +168,7 @@ public class NotificationService {
         notification.setSource(Chat.Source.CANDIDATE);
         notification.setRead(Boolean.FALSE);
         if (shortlisted) {
-            notification.setTitle("AI screening — Under review");
+            notification.setTitle("AI screening â€” Under review");
             notification.setMessage(
                     "Your application for \"" + jobTitle + "\" passed AI screening and is now under recruiter review.");
         } else {

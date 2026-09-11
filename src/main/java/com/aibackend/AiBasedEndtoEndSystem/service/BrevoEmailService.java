@@ -104,7 +104,7 @@ public class BrevoEmailService {
                         String subject;
                         String dashboardUrl = candidateAppliedJobsDashboardUrl();
                         if (shortlisted) {
-                                subject = "Your application stood out — next steps inside";
+                                subject = "Your application stood out â€” next steps inside";
                                 html = HtmlTemplateUtil.applicationShortlistedTemplate(
                                                 candidateName, jobTitle, companyName, score, dashboardUrl);
                         } else {
@@ -136,7 +136,7 @@ public class BrevoEmailService {
                         String html;
                         String subject;
                         if (hired) {
-                                subject = "Congratulations — update on your application";
+                                subject = "Congratulations â€” update on your application";
                                 html = HtmlTemplateUtil.applicationRecruiterHiredTemplate(
                                                 candidateName, jobTitle, companyName, optionalMessage, dashboardUrl);
                         } else {

@@ -82,7 +82,7 @@ public class SalaryRangeLpaDeserializer extends JsonDeserializer<SalaryRangeLpa>
         if (text == null || text.isBlank()) {
             return null;
         }
-        String normalized = text.trim().replace('–', '-').replace('—', '-').replaceAll("\\s+", "");
+        String normalized = text.trim().replace('\u2013', '-').replace('\u2014', '-').replaceAll("\\s+", "");
         int dash = normalized.indexOf('-');
         if (dash <= 0 || dash >= normalized.length() - 1) {
             return null;
