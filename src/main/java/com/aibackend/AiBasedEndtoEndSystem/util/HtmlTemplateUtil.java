@@ -40,7 +40,7 @@ public final class HtmlTemplateUtil {
         return loadTemplate(CONTACT)
                 .replace("{{email}}", email != null ? email : "")
                 .replace("{{message}}", message != null ? message : "")
-                .replace("{{source}}", source != null && !source.isBlank() ? source : "—");
+                .replace("{{source}}", source != null && !source.isBlank() ? source : "â€”");
     }
 
     /**

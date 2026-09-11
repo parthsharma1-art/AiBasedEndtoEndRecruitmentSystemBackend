@@ -37,7 +37,7 @@ public class SecurityConfig {
 //        JwtRequestFilter jwtFilter = new JwtRequestFilter(jwtUtil, userDetailsService);
 //
 //        http
-//                .cors(cors -> {})   // 🔥 IMPORTANT (ENABLE CORS)
+//                .cors(cors -> {})   // ðŸ”¥ IMPORTANT (ENABLE CORS)
 //                .csrf(csrf -> csrf.disable())
 //                .authorizeHttpRequests(auth -> auth
 //                        .requestMatchers("/public/**","/recruiter/**","/candidate/**", "api/file/**").permitAll()
@@ -87,7 +87,7 @@ public class SecurityConfig {
         config.setAllowedOriginPatterns(Arrays.asList("*"));
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(Arrays.asList("*"));
-        config.setAllowCredentials(false); // ✅ MUST be false with "*"
+        config.setAllowCredentials(false); // âœ… MUST be false with "*"
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

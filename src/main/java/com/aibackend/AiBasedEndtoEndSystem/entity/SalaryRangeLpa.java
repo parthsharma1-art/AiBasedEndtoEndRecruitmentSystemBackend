@@ -5,7 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * LPA bounds stored in MongoDB (plain integers — avoids Spring {@code Range} / {@code Optional} mapping issues).
+ * LPA bounds stored in MongoDB (plain integers â€” avoids Spring {@code Range} / {@code Optional} mapping issues).
  */
 @Data
 @NoArgsConstructor

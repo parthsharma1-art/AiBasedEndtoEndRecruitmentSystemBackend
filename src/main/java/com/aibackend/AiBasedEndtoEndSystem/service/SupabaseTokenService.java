@@ -1,4 +1,4 @@
-﻿package com.aibackend.AiBasedEndtoEndSystem.service;
+package com.aibackend.AiBasedEndtoEndSystem.service;
 
 import com.aibackend.AiBasedEndtoEndSystem.config.SupabaseConfig;
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;

@@ -66,7 +66,7 @@ public class ChatService {
             chat.setUpdatedBy(user.getId());
             chat = save(chat);
             notificationService.createNotification(source, message, chat);
-            // Broadcast Supabase Realtime signal — frontend will re-fetch chat from Spring Boot
+            // Broadcast Supabase Realtime signal â€” frontend will re-fetch chat from Spring Boot
             supabaseChatService.broadcastNewMessage(chat.getId(), user.getId(), source.name());
             return chat;
         }
@@ -91,7 +91,7 @@ public class ChatService {
         chat.setUpdatedBy(user.getId());
         chat = save(chat);
         notificationService.createNotification(source, message, chat);
-        // Broadcast Supabase Realtime signal — frontend will re-fetch chat from Spring Boot
+        // Broadcast Supabase Realtime signal â€” frontend will re-fetch chat from Spring Boot
         supabaseChatService.broadcastNewMessage(chat.getId(), user.getId(), source.name());
         return chat;
 

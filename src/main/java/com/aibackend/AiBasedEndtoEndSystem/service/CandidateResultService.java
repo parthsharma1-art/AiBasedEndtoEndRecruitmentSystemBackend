@@ -62,7 +62,7 @@ public class CandidateResultService {
         return dto;
     }
 
-    /** Ratios are stored as 0–1; API exposes whole-number percentages. */
+    /** Ratios are stored as 0â€“1; API exposes whole-number percentages. */
     private static Integer toPercentInt(Double ratio) {
         if (ratio == null) {
             return null;
