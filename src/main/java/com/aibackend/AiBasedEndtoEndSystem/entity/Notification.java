@@ -9,6 +9,14 @@ import lombok.Data;
 @Data
 @Document(collection = "notifications")
 public class Notification {
+
+    /** Identifies the domain this notification belongs to — used by the frontend for routing. */
+    public enum NotificationType {
+        CHAT,          // relativeId = chatId  → /chats/{chatId}
+        JOB,           // relativeId = jobId   → /applied-jobs or /jobs/{jobId}
+        AI_SCREENING   // relativeId = jobApplicationId or jobId
+    }
+
     @Id
     private String id;
     private String title;
@@ -20,6 +28,7 @@ public class Notification {
     private String candidateId;
     private Boolean read;
     private Chat.Source source;
+    private NotificationType notificationType;
     private String failureReason;
     private Instant createdAt;
     private Instant updatedAt;
