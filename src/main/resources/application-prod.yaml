@@ -90,5 +90,7 @@ supabase:
   enabled: ${SUPABASE_ENABLED:true}
   # Supabase project URL
   url: ${SUPABASE_URL}
-  # Supabase publishable API key (safe to expose publicly)
-  api-key: ${SUPABASE_API_KEY}
+  # Supabase service_role (secret) key
+  service-role-key: ${SUPABASE_SERVICE_ROLE_KEY}
+  # Supabase JWT Secret
+  jwt-secret: ${SUPABASE_JWT_SECRET}

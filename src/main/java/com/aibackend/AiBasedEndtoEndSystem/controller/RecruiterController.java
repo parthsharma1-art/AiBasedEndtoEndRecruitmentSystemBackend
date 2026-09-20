@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.List;
 
 import com.aibackend.AiBasedEndtoEndSystem.entity.Chat;
+import com.aibackend.AiBasedEndtoEndSystem.entity.Notification;
 import com.aibackend.AiBasedEndtoEndSystem.service.ChatService;
 import com.aibackend.AiBasedEndtoEndSystem.service.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -317,6 +318,9 @@ public class RecruiterController {
         private String message;
         private String title;
         private String relativeId;
+        private String candidateId;
+        private Chat.Source source;
+        private Notification.NotificationType notificationType;
     }
 
     @Data

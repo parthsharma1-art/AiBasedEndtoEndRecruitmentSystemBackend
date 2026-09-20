@@ -1,5 +1,4 @@
 
-
 package com.aibackend.AiBasedEndtoEndSystem.util;
 
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
@@ -30,11 +29,9 @@ public class JwtUtil {
     private static final String AUTH_USER_CACHE_PREFIX = "auth:userDTO:";
     private static final Duration AUTH_USER_CACHE_TTL = Duration.ofDays(1);
 
-    private static final String SECRET =
-            "AIBasedEndToEndRecruitmentSystemSecretKey1234567890";
+    private static final String SECRET = "AIBasedEndToEndRecruitmentSystemSecretKey1234567890";
 
-    private final Key key =
-            Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
+    private final Key key = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
 
     private static final long TOKEN_EXPIRY_SECONDS = 72 * 60 * 60; // 72 hours
     private final StringRedisTemplate stringRedisTemplate;
@@ -109,8 +106,7 @@ public class JwtUtil {
             stringRedisTemplate.opsForValue().set(
                     redisKey,
                     objectMapper.writeValueAsString(userDTO),
-                    AUTH_USER_CACHE_TTL
-            );
+                    AUTH_USER_CACHE_TTL);
         } catch (JsonProcessingException e) {
             log.warn("Failed to serialize auth user context for key {}.", redisKey);
         } catch (Exception e) {

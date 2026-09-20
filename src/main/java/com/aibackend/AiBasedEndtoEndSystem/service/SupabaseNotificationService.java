@@ -3,7 +3,6 @@ package com.aibackend.AiBasedEndtoEndSystem.service;
 import com.aibackend.AiBasedEndtoEndSystem.config.SupabaseConfig;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Notification;
 import com.aibackend.AiBasedEndtoEndSystem.repository.NotificationRepository;
-import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtility;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
@@ -48,9 +47,6 @@ public class SupabaseNotificationService {
     private NotificationRepository notificationRepository;
 
     @Autowired
-    private UniqueUtility uniqueUtility;
-
-    @Autowired
     private ObjectMapper objectMapper;
 
     private static final String NOTIFICATIONS_TABLE = "notifications";
@@ -62,8 +58,9 @@ public class SupabaseNotificationService {
     // -----------------------------------------------------------------------
 
     /**
-     * Sends a notification to Supabase (real-time delivery) and saves a
-     * corresponding record in MongoDB (history/pagination).
+     * Sends a real-time signal to Supabase for the given recipient.
+     * Does NOT write to MongoDB — the caller (NotificationService) already
+     * saves the canonical MongoDB record before invoking this method.
      */
     public CompletableFuture<Boolean> sendNotification(
             String recipientId, String title, String message,
@@ -71,29 +68,8 @@ public class SupabaseNotificationService {
 
         return CompletableFuture.supplyAsync(() -> {
             try {
-                // 1. Save to MongoDB (history / REST API fallback)
-                Notification mongoNotification = new Notification();
-                mongoNotification.setId(uniqueUtility.getNextNumber("NOTIFICATION", "notification"));
-                mongoNotification.setTitle(title);
-                mongoNotification.setMessage(message);
-                mongoNotification.setReceiverId(recipientId);
-                mongoNotification.setRelativeId(relatedId);
-                mongoNotification.setRead(false);
-                mongoNotification.setCreatedAt(Instant.now());
-                mongoNotification.setUpdatedAt(Instant.now());
-                mongoNotification.setFailureReason(null);
-
-                try {
-                    notificationRepository.save(mongoNotification);
-                    log.debug("Notification saved to MongoDB: {}", mongoNotification.getId());
-                } catch (Exception e) {
-                    log.error("Error saving notification to MongoDB", e);
-                    mongoNotification.setFailureReason("MongoDB save failed: " + e.getMessage());
-                }
-
-                // 2. Send to Supabase (real-time delivery)
                 if (!supabaseConfig.isSupabaseEnabled()) {
-                    log.debug("Supabase is disabled. Notification saved to MongoDB only.");
+                    log.debug("Supabase is disabled. Skipping real-time push for recipient: {}", recipientId);
                     return true;
                 }
 
@@ -104,7 +80,9 @@ public class SupabaseNotificationService {
                 payload.put("type", type != null ? type : TYPE_GENERAL);
                 payload.put("is_read", false);
                 payload.put("created_at", Instant.now().toString());
-                payload.put("mongodb_notification_id", mongoNotification.getId());
+                if (relatedId != null && !relatedId.isEmpty()) {
+                    payload.put("related_id", relatedId);
+                }
 
                 if (metadata != null && !metadata.isEmpty()) {
                     try {
@@ -116,9 +94,9 @@ public class SupabaseNotificationService {
 
                 boolean supabaseSuccess = insertToSupabase(NOTIFICATIONS_TABLE, payload);
                 if (supabaseSuccess) {
-                    log.info("Notification delivered via Supabase Realtime to recipient: {}", recipientId);
+                    log.debug("Notification delivered via Supabase Realtime to recipient: {}", recipientId);
                 } else {
-                    log.warn("Supabase delivery failed for: {}. MongoDB record still saved.", recipientId);
+                    log.warn("Supabase delivery failed for: {}. MongoDB record was already saved by caller.", recipientId);
                 }
                 return supabaseSuccess;
             } catch (Exception e) {
@@ -127,6 +105,7 @@ public class SupabaseNotificationService {
             }
         });
     }
+
 
     /**
      * Sends a notification with a structured metadata map (preferred for rich notifications).

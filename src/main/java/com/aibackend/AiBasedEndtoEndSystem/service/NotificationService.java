@@ -43,8 +43,10 @@ public class NotificationService {
         notification.setId(uniqueUtility.getNextNumber("NOTIFICATION", "notification"));
         notification.setCreatedAt(Instant.now());
         notification.setMessage(message);
-        notification.setRelativeId(chat.getId());
+        notification.setRelativeId(chat.getId());  // always the chatId
         notification.setTitle("New Message");
+        notification.setRead(Boolean.FALSE);         // never null
+        notification.setNotificationType(Notification.NotificationType.CHAT);
         switch (source) {
             case CANDIDATE:
                 notification.setSenderId(chat.getCandidateId());
@@ -100,7 +102,7 @@ public class NotificationService {
         List<Notification> notifications = repository.findByReceiverIdOrderByCreatedAtDesc(user.getId());
         if (notifications.isEmpty()) {
             log.info("No notification found for the user");
-            return null;
+            return list; // return empty list, never null
         }
         for (Notification notification : notifications) {
             RecruiterController.NotificationResponse response = new RecruiterController.NotificationResponse();
@@ -108,8 +110,13 @@ public class NotificationService {
             response.setTitle(notification.getTitle());
             String message = chatService.safeDecrypt(notification.getMessage());
             response.setMessage(message);
-            response.setRead(notification.getRead());
+            // Guard against old docs that were stored without read flag
+            response.setRead(notification.getRead() != null ? notification.getRead() : Boolean.FALSE);
             response.setRelativeId(notification.getRelativeId());
+            response.setNotificationType(notification.getNotificationType());
+            response.setRecruiterId(notification.getRecruiterId());
+            response.setCandidateId(notification.getCandidateId());
+            response.setSource(notification.getSource());
             list.add(response);
         }
         return list;
@@ -135,10 +142,13 @@ public class NotificationService {
         notification.setCreatedAt(Instant.now());
         notification.setMessage(message);
         notification.setReceiverId(candidate.getId());
-        notification.setRelativeId(jobPostings.getId());
+        notification.setSenderId(candidate.getId());
+        notification.setRelativeId(jobPostings.getId()); // jobId
         notification.setTitle("Job Application Submitted");
         notification.setCandidateId(candidate.getId());
         notification.setSource(Chat.Source.CANDIDATE);
+        notification.setRead(Boolean.FALSE);              // never null
+        notification.setNotificationType(Notification.NotificationType.JOB);
         saveNotification(notification);
         // Push to Supabase Realtime
         supabaseNotificationService.sendNotificationAsync(
@@ -167,6 +177,7 @@ public class NotificationService {
         notification.setRelativeId(jobApplicationId != null && !jobApplicationId.isBlank() ? jobApplicationId : job.getId());
         notification.setSource(Chat.Source.CANDIDATE);
         notification.setRead(Boolean.FALSE);
+        notification.setNotificationType(Notification.NotificationType.AI_SCREENING);
         if (shortlisted) {
             notification.setTitle("AI screening â€” Under review");
             notification.setMessage(
