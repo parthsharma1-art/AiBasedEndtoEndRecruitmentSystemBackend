@@ -3,26 +3,31 @@ spring:
     mongodb:
       uri: ${MONGODB_URI}
       database: aibasedendtoendsystem
+
     redis:
-      # Upstash TCP endpoint (TLS). Used by StringRedisTemplate / RedisTemplate / cache (Lettuce).
+      # Upstash TCP endpoint (TLS)
       # Must be a rediss:// URL, NOT the https:// REST URL.
-      url: ${REDIS_URL:rediss://default:gQAAAAAAAlF9AAIgcDI3NTkwMDRkNmE0NDA0YThjYjIwMzY4Yzc3MjgzOTE2Yw@modest-wombat-151933.upstash.io:6379}
+      url: ${REDIS_URL}
       ssl:
         enabled: true
       timeout: 5s
       connect-timeout: 5s
+
   servlet:
     multipart:
       enabled: true
       max-file-size: 50MB
       max-request-size: 100MB
+
   cache:
     type: redis
 
-# Upstash REST (HTTP) endpoint. Used only by RedisConfig.set/get (TestController).
-# Override with env UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN (or REDIS_REST_URL / REDIS_REST_TOKEN).
-UPSTASH_REDIS_REST_URL: ${REDIS_REST_URL:https://modest-wombat-151933.upstash.io}
-UPSTASH_REDIS_REST_TOKEN: ${REDIS_REST_TOKEN:gQAAAAAAAlF9AAIgcDI3NTkwMDRkNmE0NDA0YThjYjIwMzY4Yzc3MjgzOTE2Yw}
+
+# Upstash REST configuration
+# Used by RedisConfig.set/get (TestController).
+UPSTASH_REDIS_REST_URL: ${REDIS_REST_URL}
+UPSTASH_REDIS_REST_TOKEN: ${REDIS_REST_TOKEN}
+
 
 server:
   port: 8081
@@ -38,78 +43,93 @@ app:
   auth:
     otp:
       ttl-minutes: 10
-      # JVM memory OTP if Redis fails; single-instance only. Prod: fix REDIS_URL (use rediss:// for Upstash).
+
+      # JVM memory OTP fallback if Redis fails.
       memory-fallback-when-redis-unavailable: ${OTP_MEMORY_FALLBACK:false}
+
   oauth2:
     client:
       registration:
         google:
           provider: google
-          client-id: 933277047426-lc7eeb96h30umrm6qfoncp6l27026s07.apps.googleusercontent.com
-          client-secret: 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
-          redirectUriForRecruiter: http://localhost:8081/api/recruiter/google/login
-          redirectUriForCandidate: http://localhost:8081/api/candidate/google/login
+          client-id: ${GOOGLE_CLIENT_ID}
+          client-secret: ${GOOGLE_CLIENT_SECRET}
+          redirectUriForRecruiter: ${GOOGLE_RECRUITER_REDIRECT_URI:http://localhost:8081/api/recruiter/google/login}
+          redirectUriForCandidate: ${GOOGLE_CANDIDATE_REDIRECT_URI:http://localhost:8081/api/candidate/google/login}
+
 
 app.config:
   url:
-    baseUrl: https://localhost:8081/api
-    frontEndUrl: http://localhost:3000
-    hostFrontEndUrl: https://ai-based-endto-end-recruitment-syst.vercel.app
+    baseUrl: ${APP_BASE_URL:http://localhost:8081/api}
+    frontEndUrl: ${FRONTEND_URL:http://localhost:3000}
+    hostFrontEndUrl: ${HOST_FRONTEND_URL:https://ai-based-end-to-end-recruitment-syst.vercel.app}
+
 
 brevo:
   api:
-     key: ${BREVO_API_KEY}
+    key: ${BREVO_API_KEY}
   sender:
-    email: parthsharma7817@gmail.com
+    email: ${BREVO_SENDER_EMAIL:parthsharma7817@gmail.com}
+
   receiver:
-    email: ai.recruitment.platform@gmail.com
+    email: ${BREVO_RECEIVER_EMAIL:ai.recruitment.platform@gmail.com}
+
 
 cron:
   job:
     time: "${CRON_JOB_TIME:0 0 */14 * * *}"
+
     shortlistEvaluation:
       time: "${CRON_SHORTLIST_EVALUATION_TIME:0 */8 * * * *}"
+
     aiServiceKeepAlive:
       time: "${CRON_AI_SERVICE_KEEP_ALIVE_TIME:0 */4 * * * *}"
 
+
 ai-service:
   base-url: ${AI_SERVICE_BASE_URL:http://127.0.0.1:8000}
+
 
 shortlist:
   evaluate:
     url: ${ai-service.base-url}/shortlist/evaluate
     batchUrl: ${ai-service.base-url}/shortlist/evaluate-batch
+
   atsScore:
     url: ${ai-service.base-url}/shortlist/ats-score
+
 
 ai:
   test:
     generate:
       url: ${ai-service.base-url}/test/generate
+
   interview:
     start:
       url: ${ai-service.base-url}/interview/start
+
     answer:
       url: ${ai-service.base-url}/interview/answer
+
 
 razorpay:
   key-id: ${RAZORPAY_KEY_ID}
   key-secret: ${RAZORPAY_KEY_SECRET}
   webhook-secret: ${RAZORPAY_WEBHOOK_SECRET}
 
-# Supabase Configuration for Real-time Notifications and Chat
+
+# Supabase Configuration
 supabase:
-  # Set to true to enable Supabase integration
   enabled: ${SUPABASE_ENABLED:true}
   # Supabase project URL (e.g., https://your-project.supabase.co)
   url: ${SUPABASE_URL}
+
   # Supabase service_role (secret) key — BACKEND ONLY, NEVER expose to frontend.
   # Used for server-side REST API calls that bypass Row Level Security.
   # Find in: Supabase Dashboard -> Settings -> API -> service_role key
   service-role-key: ${SUPABASE_SERVICE_ROLE_KEY}
+
   # Supabase JWT Secret — used by the backend to issue short-lived Supabase JWTs
   # for the frontend to authenticate Realtime subscriptions.
   # Find in: Supabase Dashboard -> Settings -> API -> JWT Secret
   jwt-secret: ${SUPABASE_JWT_SECRET}
-
-
