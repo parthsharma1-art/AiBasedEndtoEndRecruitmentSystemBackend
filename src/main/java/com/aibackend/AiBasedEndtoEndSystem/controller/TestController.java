@@ -61,6 +61,12 @@ public class TestController {
         return cacheCommonService.getUserById(id);
     }
 
+    @GetMapping("/refresh-cache")
+    public String refreshCache() {
+        cacheCommonService.clearAllCachesOnStartup();
+        return "Cache refreshed successfully! Next request will load new data from the database.";
+    }
+
     @PostMapping
     public List<ShortlistEvaluationResult> evaluateShortlistForAllJobApplications() {
         log.info("Starting the work for shortlisting");
