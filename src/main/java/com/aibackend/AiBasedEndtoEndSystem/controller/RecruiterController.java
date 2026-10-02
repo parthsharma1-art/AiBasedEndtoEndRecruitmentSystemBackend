@@ -32,6 +32,7 @@ import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.SubscriptionPlan.SubscriptionPlanType;
 import com.aibackend.AiBasedEndtoEndSystem.entity.SubscriptionPlan.SubscriptionStatus;
 import com.aibackend.AiBasedEndtoEndSystem.service.RecruiterService;
+import com.aibackend.AiBasedEndtoEndSystem.service.RecaptchaService;
 import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
 import com.aibackend.AiBasedEndtoEndSystem.util.SecurityUtils;
 
@@ -55,6 +56,8 @@ public class RecruiterController {
     private ChatService chatService;
     @Autowired
     private NotificationService notificationService;
+    @Autowired
+    private RecaptchaService recaptchaService;
 
     @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public PublicController.UserResponse createNewHR(
@@ -62,6 +65,10 @@ public class RecruiterController {
             @RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
             @RequestPart(value = "idCard", required = false) MultipartFile idCard) {
 
+        // reCAPTCHA verification
+        if (!recaptchaService.verify(request.getRecaptchaToken(), "SIGNUP")) {
+            throw new com.aibackend.AiBasedEndtoEndSystem.exception.BadException("reCAPTCHA verification failed. Please try again.");
+        }
         UserDTO userDTO = recruiterService.createNewRecruiter(request, profileImage, idCard);
         userDTO.setRole("Recruiter");
         JwtUtil.Token token = jwtUtil.generateClientToken(userDTO);
@@ -72,6 +79,10 @@ public class RecruiterController {
     public PublicController.UserResponse createNewHR(@RequestBody PublicController.LoginRequest request)
             throws Exception {
         log.info("Recruiter login request :{}", request);
+        // reCAPTCHA verification
+        if (!recaptchaService.verify(request.getRecaptchaToken(), "LOGIN")) {
+            throw new com.aibackend.AiBasedEndtoEndSystem.exception.BadException("reCAPTCHA verification failed. Please try again.");
+        }
         UserDTO userDTO = recruiterService.getUserLogin(request);
         userDTO.setRole("Recruiter");
         JwtUtil.Token token = jwtUtil.generateClientToken(userDTO);
@@ -138,6 +149,7 @@ public class RecruiterController {
         private String designation;
         private String password;
         private String confirmPassword;
+        private String recaptchaToken;
     }
 
     @PostMapping("/logout")

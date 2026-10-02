@@ -4,6 +4,7 @@ import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
 import com.aibackend.AiBasedEndtoEndSystem.service.BrevoEmailService;
 import com.aibackend.AiBasedEndtoEndSystem.service.OtpService;
+import com.aibackend.AiBasedEndtoEndSystem.service.RecaptchaService;
 import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +29,8 @@ public class AuthController {
     private JwtUtil jwtUtil;
     @Autowired
     private PublicController publicController;
+    @Autowired
+    private RecaptchaService recaptchaService;
 
     @PostMapping("/send-otp")
     public Boolean sendOtp(@RequestBody EmailLoginRequest request) {
@@ -36,6 +39,12 @@ public class AuthController {
             String email = request.getEmail();
             String role = request.getRole();
             log.info("Send OTP request email={} role={}", email, role);
+
+            // reCAPTCHA verification
+            if (!recaptchaService.verify(request.getRecaptchaToken(), "SEND_OTP")) {
+                throw new BadException("reCAPTCHA verification failed. Please try again.");
+            }
+
             String otp = otpService.generateOtp(email, role);
             log.info("OTP is :{}", otp);
             emailService.sendHtmlEmail(email, otp);
@@ -51,6 +60,12 @@ public class AuthController {
     @PostMapping("/verify-otp")
     public PublicController.UserResponse verify(@RequestBody VerifyRequest request) {
         log.info("Request is this :{}", request);
+
+        // reCAPTCHA verification
+        if (!recaptchaService.verify(request.getRecaptchaToken(), "VERIFY_OTP")) {
+            throw new BadException("reCAPTCHA verification failed. Please try again.");
+        }
+
         UserDTO userDTO = otpService.verifyOtp(request.getEmail(), request.getOtp(), request.getRole());
         if (ObjectUtils.isEmpty(userDTO)) {
             throw new BadException("Invalid otp");
@@ -66,12 +81,13 @@ public class AuthController {
         private String email;
         private String otp;
         private String role;
-
+        private String recaptchaToken;
     }
 
     @Data
     public static class EmailLoginRequest {
         private String email;
         private String role;
+        private String recaptchaToken;
     }
 }

@@ -94,3 +94,14 @@ supabase:
   service-role-key: ${SUPABASE_SERVICE_ROLE_KEY}
   # Supabase JWT Secret
   jwt-secret: ${SUPABASE_JWT_SECRET}
+
+# ─── Google reCAPTCHA Enterprise ───────────────────────────────────────────
+# Set RECAPTCHA_API_KEY as an env var in Render (server-side Google Cloud API key)
+# Set RECAPTCHA_ENABLED=false in local dev if you don't want verification
+recaptcha:
+  project-id: aibasedrecruitmentsystem
+  site-key: 6Ld1cdstAAAAAJ3P_CdxKQ1KCm_kE7BMoRUZOgYA
+  api-key: ${RECAPTCHA_API_KEY:6Ld1cdstAAAAAP_EDO8N_bi0sBlF_hNHjDGEkHTp}
+  min-score: 0.5
+  enabled: ${RECAPTCHA_ENABLED:true}
+
