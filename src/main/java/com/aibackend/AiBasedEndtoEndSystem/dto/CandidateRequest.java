@@ -24,6 +24,7 @@ public class CandidateRequest {
     private String cityPreference;
     private String password;
     private String confirmPassword;
+    private String recaptchaToken;
 
     @Data
     public static class LocationDTO {

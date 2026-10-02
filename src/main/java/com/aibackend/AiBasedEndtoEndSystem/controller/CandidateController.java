@@ -20,6 +20,7 @@ import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.entity.Candidate;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
 import com.aibackend.AiBasedEndtoEndSystem.service.CandidateService;
+import com.aibackend.AiBasedEndtoEndSystem.service.RecaptchaService;
 import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
 import com.aibackend.AiBasedEndtoEndSystem.util.SecurityUtils;
 
@@ -48,6 +49,8 @@ public class CandidateController {
     private NotificationService notificationService;
     @Autowired
     private CandidateResumeAtsService candidateResumeAtsService;
+    @Autowired
+    private RecaptchaService recaptchaService;
 
     @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public PublicController.UserResponse createNewCandidate(
@@ -55,6 +58,10 @@ public class CandidateController {
             @RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
             @RequestPart(value = "resume", required = false) MultipartFile resume) {
         log.info("New Candidate Details :{}", request);
+        // reCAPTCHA verification
+        if (!recaptchaService.verify(request.getRecaptchaToken(), "SIGNUP")) {
+            throw new BadException("reCAPTCHA verification failed. Please try again.");
+        }
         UserDTO candidateDto = candidateService.createNewCandidate(request, profileImage, resume);
         candidateDto.setRole("Candidate");
         JwtUtil.Token token = jwtUtil.generateClientToken(candidateDto);
@@ -63,6 +70,10 @@ public class CandidateController {
 
     @PostMapping("/login")
     public PublicController.UserResponse login(@RequestBody PublicController.LoginRequest request) throws Exception {
+        // reCAPTCHA verification
+        if (!recaptchaService.verify(request.getRecaptchaToken(), "LOGIN")) {
+            throw new BadException("reCAPTCHA verification failed. Please try again.");
+        }
         UserDTO user = candidateService.getCandidateByEmailAndPassword(request);
         user.setRole("Candidate");
         JwtUtil.Token token = jwtUtil.generateClientToken(user);
