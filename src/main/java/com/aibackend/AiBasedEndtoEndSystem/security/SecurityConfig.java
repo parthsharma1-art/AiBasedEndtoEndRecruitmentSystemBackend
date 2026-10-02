@@ -37,7 +37,7 @@ public class SecurityConfig {
 //        JwtRequestFilter jwtFilter = new JwtRequestFilter(jwtUtil, userDetailsService);
 //
 //        http
-//                .cors(cors -> {})   // ðŸ”¥ IMPORTANT (ENABLE CORS)
+//                .cors(cors -> {})   // 🔥 IMPORTANT (ENABLE CORS)
 //                .csrf(csrf -> csrf.disable())
 //                .authorizeHttpRequests(auth -> auth
 //                        .requestMatchers("/public/**","/recruiter/**","/candidate/**", "api/file/**").permitAll()
@@ -85,10 +85,11 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOriginPatterns(Arrays.asList("*"));
+        // ✅ Only allow requests from the production frontend domain
+        config.setAllowedOrigins(Arrays.asList("https://ai-based-endto-end-recruitment-syst.vercel.app"));
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(Arrays.asList("*"));
-        config.setAllowCredentials(false); // âœ… MUST be false with "*"
+        config.setAllowCredentials(true); // ✅ Safe to enable with a specific origin
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
