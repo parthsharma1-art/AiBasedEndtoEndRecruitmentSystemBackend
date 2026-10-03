@@ -5,8 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,12 +30,23 @@ public class CheckoutController {
     private final CheckoutService paymentService;
 
     @PostMapping("/create")
-    public Checkout createCheckout(@RequestBody CheckoutRequest request) throws Exception {
+    public ResponseEntity<CheckoutDto> createCheckout(@RequestBody CheckoutRequest request) throws Exception {
         UserDTO user = SecurityUtils.getLoggedInUser();
         if (user == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found");
         }
-        return paymentService.createCheckoutFromRequest(user, request);
+        Checkout checkout = paymentService.createCheckoutFromRequest(user, request);
+        return ResponseEntity.ok(toCheckoutDto(checkout));
+    }
+
+    @PostMapping("/verify")
+    public ResponseEntity<CheckoutDto> verifyPayment(@RequestBody PaymentVerificationRequest request) {
+        UserDTO user = SecurityUtils.getLoggedInUser();
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found");
+        }
+        Checkout checkout = paymentService.verifyAndCapturePayment(user, request);
+        return ResponseEntity.ok(toCheckoutDto(checkout));
     }
 
     @GetMapping("/list")
@@ -61,8 +72,13 @@ public class CheckoutController {
         dto.setPriceInPaise(checkout.getPriceInPaise());
         dto.setDurationDays(checkout.getDurationDays());
         dto.setDescription(checkout.getDescription());
+        dto.setStartDate(checkout.getStartDate());
+        dto.setEndDate(checkout.getEndDate());
         dto.setType(checkout.getType());
         dto.setStatus(checkout.getStatus());
+        dto.setRazorpayOrderId(checkout.getRazorpayOrderId());
+        dto.setRazorpayPaymentId(checkout.getRazorpayPaymentId());
+        dto.setRazorpayInvoiceId(checkout.getRazorpayInvoiceId());
         dto.setCreatedAt(checkout.getCreatedAt());
         dto.setUpdatedAt(checkout.getUpdatedAt());
         return dto;
@@ -77,6 +93,14 @@ public class CheckoutController {
     }
 
     @Data
+    public static class PaymentVerificationRequest {
+        private String checkoutId;
+        private String razorpayOrderId;
+        private String razorpayPaymentId;
+        private String razorpaySignature;
+    }
+
+    @Data
     public static class CheckoutDto {
         private String id;
         private String companyId;
@@ -85,9 +109,13 @@ public class CheckoutController {
         private Long priceInPaise;
         private Integer durationDays;
         private String description;
+        private Instant startDate;
         private Instant endDate;
         private SubscriptionPlanType type;
         private Checkout.CheckoutStatus status;
+        private String razorpayOrderId;
+        private String razorpayPaymentId;
+        private String razorpayInvoiceId;
         private Instant createdAt;
         private Instant updatedAt;
     }

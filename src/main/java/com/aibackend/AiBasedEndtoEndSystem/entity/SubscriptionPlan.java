@@ -34,11 +34,33 @@ public class SubscriptionPlan {
     private SubscriptionStatus status;
 
     public enum SubscriptionPlanType {
-        GRACE_PERIOD,
-        BASIC,
-        STANDARD,
-        PREMIUM,
-        FREE;
+        GRACE_PERIOD(0L, 7, "Grace Period - 7 days"),
+        BASIC(2000L, 30, "Basic Plan - 30 days"),
+        STANDARD(5000L, 90, "Standard Plan - 90 days"),
+        PREMIUM(19900L, 365, "Premium Plan - 365 days"),
+        FREE(0L, 0, "Free Plan");
+
+        private final Long defaultPriceInPaise;
+        private final Integer defaultDurationDays;
+        private final String defaultDescription;
+
+        SubscriptionPlanType(Long defaultPriceInPaise, Integer defaultDurationDays, String defaultDescription) {
+            this.defaultPriceInPaise = defaultPriceInPaise;
+            this.defaultDurationDays = defaultDurationDays;
+            this.defaultDescription = defaultDescription;
+        }
+
+        public Long getDefaultPriceInPaise() {
+            return defaultPriceInPaise;
+        }
+
+        public Integer getDefaultDurationDays() {
+            return defaultDurationDays;
+        }
+
+        public String getDefaultDescription() {
+            return defaultDescription;
+        }
     }
 
     public enum SubscriptionStatus {
