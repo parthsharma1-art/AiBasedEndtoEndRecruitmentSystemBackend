@@ -24,8 +24,12 @@ UPSTASH_REDIS_REST_TOKEN: ${REDIS_REST_TOKEN:gQAAAAAAAlF9AAIgcDI3NTkwMDRkNmE0NDA
 
 server:
   port: 8081
+  forward-headers-strategy: framework
   servlet:
     context-path: /api
+
+jwt:
+  secret: ${JWT_SECRET:AIBasedEndToEndRecruitmentSystemSecretKey1234567890}
 app:
   auth:
     otp:
@@ -101,7 +105,7 @@ supabase:
 recaptcha:
   project-id: aibasedrecruitmentsystem
   site-key: 6Ld1cdstAAAAAJ3P_CdxKQ1KCm_kE7BMoRUZOgYA
-  api-key: ${RECAPTCHA_API_KEY:6Ld1cdstAAAAAP_EDO8N_bi0sBlF_hNHjDGEkHTp}
+  api-key: ${RECAPTCHA_API_KEY:AIzaSyA5jOexQz_69zYVvQY9Kh4eNHCckpjlz10}
   min-score: 0.5
   enabled: ${RECAPTCHA_ENABLED:true}
 
