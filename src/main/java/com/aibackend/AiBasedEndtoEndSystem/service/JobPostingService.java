@@ -27,9 +27,12 @@ import com.aibackend.AiBasedEndtoEndSystem.entity.Recruiter;
 import com.aibackend.AiBasedEndtoEndSystem.entity.SalaryRangeLpa;
 import com.aibackend.AiBasedEndtoEndSystem.entity.ShortlistEvaluationResult;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
+import com.aibackend.AiBasedEndtoEndSystem.entity.SubscriptionPlan;
+import com.aibackend.AiBasedEndtoEndSystem.entity.SubscriptionPlan.SubscriptionStatus;
 import com.aibackend.AiBasedEndtoEndSystem.repository.JobApplicationRepository;
 import com.aibackend.AiBasedEndtoEndSystem.repository.JobPostingRepository;
 import com.aibackend.AiBasedEndtoEndSystem.repository.ShortlistEvaluationResultRepository;
+import com.aibackend.AiBasedEndtoEndSystem.repository.SubscriptionPlanRepository;
 import com.aibackend.AiBasedEndtoEndSystem.util.UniqueUtility;
 
 import lombok.RequiredArgsConstructor;
@@ -49,6 +52,7 @@ public class JobPostingService {
     private final ShortlistEvaluationResultRepository shortlistEvaluationResultRepository;
     private final JobApplicationGeneratedTestService jobApplicationGeneratedTestService;
     private final AiInterviewService aiInterviewService;
+    private final SubscriptionPlanRepository subscriptionPlanRepository;
 
     @Lazy
     private final CompanyProfileService companyProfileService;
@@ -67,9 +71,37 @@ public class JobPostingService {
         if (ObjectUtils.isEmpty(companyProfile.getBasicSetting())) {
             throw new BadException("Basic Settings are required Before Posting jobs");
         }
+
+        // 🔒 Verify Recruiter Subscription & Expiry
+        validateActiveSubscription(user.getId());
+
         log.info("Request coming from frontend :{}", request);
         JobPostings jopPosting = createJob(request, companyProfile);
         return toJobPostingsResponse(jopPosting);
+    }
+
+    private void validateActiveSubscription(String recruiterId) {
+        SubscriptionPlan subscription = subscriptionPlanRepository.findByRecruiterId(recruiterId).orElse(null);
+        if (subscription == null) {
+            log.warn("Job posting denied: No subscription found for recruiterId={}", recruiterId);
+            throw new BadException("Active subscription required to post jobs. Please purchase a subscription plan.");
+        }
+
+        Instant now = Instant.now();
+        if (subscription.getEndDate() == null || subscription.getEndDate().isBefore(now)) {
+            if (!SubscriptionStatus.EXPIRED.equals(subscription.getStatus())) {
+                subscription.setStatus(SubscriptionStatus.EXPIRED);
+                subscription.setUpdatedAt(now);
+                subscriptionPlanRepository.save(subscription);
+            }
+            log.warn("Job posting denied: Subscription expired for recruiterId={}", recruiterId);
+            throw new BadException("Your subscription expired on " + subscription.getEndDate() + ". Please purchase or renew a subscription to post jobs.");
+        }
+
+        if (!SubscriptionStatus.ACTIVE.equals(subscription.getStatus())) {
+            log.warn("Job posting denied: Subscription status is {} for recruiterId={}", subscription.getStatus(), recruiterId);
+            throw new BadException("Your subscription is not active (" + subscription.getStatus() + "). Please activate or renew your subscription to post jobs.");
+        }
     }
 
     public CompanyProfileController.JobPostingsResponse toJobPostingsResponse(JobPostings job) {

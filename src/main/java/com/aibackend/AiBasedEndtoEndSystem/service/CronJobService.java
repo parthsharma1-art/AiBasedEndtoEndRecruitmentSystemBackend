@@ -11,6 +11,9 @@ import org.springframework.web.client.RestTemplate;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications.AIShortlistStatus;
 import com.aibackend.AiBasedEndtoEndSystem.entity.JobApplications.JobStatus;
+import com.aibackend.AiBasedEndtoEndSystem.entity.SubscriptionPlan;
+import com.aibackend.AiBasedEndtoEndSystem.entity.SubscriptionPlan.SubscriptionStatus;
+import com.aibackend.AiBasedEndtoEndSystem.repository.SubscriptionPlanRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +25,7 @@ public class CronJobService {
 
     private final JobApplicationService jobApplicationService;
     private final RestTemplate restTemplate;
+    private final SubscriptionPlanRepository subscriptionPlanRepository;
 
     @Value("${ai-service.base-url}")
     private String aiServiceBaseUrl;
@@ -67,6 +71,26 @@ public class CronJobService {
             log.info("AI service keep-alive ping sent successfully to {}", aiServiceBaseUrl);
         } catch (Exception e) {
             log.warn("AI service keep-alive ping failed for {}", aiServiceBaseUrl, e);
+        }
+    }
+
+    @Scheduled(cron = "${cron.job.subscriptionExpiry.time:0 0 * * * *}")
+    public void scheduledSubscriptionExpiryCheck() {
+        try {
+            Instant now = Instant.now();
+            List<SubscriptionPlan> expiredSubscriptions =
+                    subscriptionPlanRepository.findByStatusAndEndDateBefore(SubscriptionStatus.ACTIVE, now);
+            if (!expiredSubscriptions.isEmpty()) {
+                log.info("Found {} active subscriptions past end date. Transitioning to EXPIRED.",
+                        expiredSubscriptions.size());
+                for (SubscriptionPlan sub : expiredSubscriptions) {
+                    sub.setStatus(SubscriptionStatus.EXPIRED);
+                    sub.setUpdatedAt(now);
+                }
+                subscriptionPlanRepository.saveAll(expiredSubscriptions);
+            }
+        } catch (Exception e) {
+            log.error("scheduledSubscriptionExpiryCheck failed", e);
         }
     }
 

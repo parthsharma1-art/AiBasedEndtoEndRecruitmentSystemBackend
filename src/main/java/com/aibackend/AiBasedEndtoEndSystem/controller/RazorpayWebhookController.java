@@ -43,6 +43,12 @@ public class RazorpayWebhookController {
             @RequestHeader(value = "X-Razorpay-Signature", required = false) String razorpaySignature) {
         log.info("Razorpay webhook received: {}", payload);
         try {
+            if (!StringUtils.hasText(webhookSecret)) {
+                log.error("Razorpay webhook-secret is not configured!");
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("ok", false, "message", "Webhook secret missing"));
+            }
+
             if (!StringUtils.hasText(razorpaySignature)
                     || !verifyWebhookSignature(payload, razorpaySignature, webhookSecret)) {
                 log.error("Invalid Razorpay webhook signature");
@@ -53,26 +59,38 @@ public class RazorpayWebhookController {
             JsonNode root = objectMapper.readTree(payload);
             String event = root.path("event").asText("");
             JsonNode payment = root.path("payload").path("payment").path("entity");
+            JsonNode order = root.path("payload").path("order").path("entity");
 
             String orderId = textOrNull(payment.path("order_id"));
+            if (orderId == null) {
+                orderId = textOrNull(order.path("id"));
+            }
             String paymentId = textOrNull(payment.path("id"));
             String invoiceId = textOrNull(payment.path("invoice_id"));
+
+            // Check checkoutId in payment notes, or fallback to order notes
             String checkoutId = textOrNull(payment.path("notes").path("checkoutId"));
-            log.info("Razorpay webhook checkoutId={}", checkoutId);
             if (checkoutId == null) {
                 checkoutId = textOrNull(payment.path("notes").path("checkout_id"));
+            }
+            if (checkoutId == null) {
+                checkoutId = textOrNull(order.path("notes").path("checkoutId"));
+            }
+            if (checkoutId == null) {
+                checkoutId = textOrNull(order.path("notes").path("checkout_id"));
             }
 
             log.info("Razorpay webhook event={} orderId={} paymentId={} checkoutId={} invoiceId={}",
                     event, orderId, paymentId, checkoutId, invoiceId);
 
-            if ("payment.captured".equals(event)) {
+            if ("payment.captured".equals(event) || "order.paid".equals(event)) {
                 var saved = paymentService.markPaymentCaptured(orderId, checkoutId, paymentId, razorpaySignature,
-                        invoiceId, "webhook");
-                log.info("Webhook processed payment capture for checkoutId={} persistedInvoiceId={}",
+                        invoiceId, "webhook:" + event);
+                log.info("Webhook processed payment capture for checkoutId={} invoiceId={}",
                         saved.getId(), saved.getRazorpayInvoiceId());
                 return ResponseEntity.ok(Map.of("ok", true, "message", "Payment captured processed"));
             }
+
             if ("payment.failed".equals(event)) {
                 String reason = textOrNull(payment.path("error_description"));
                 if (reason == null) {

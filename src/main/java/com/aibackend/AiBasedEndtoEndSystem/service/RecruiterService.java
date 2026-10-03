@@ -1,5 +1,6 @@
 package com.aibackend.AiBasedEndtoEndSystem.service;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,7 @@ import com.aibackend.AiBasedEndtoEndSystem.controller.RecruiterController.Recrui
 import com.aibackend.AiBasedEndtoEndSystem.dto.UserDTO;
 import com.aibackend.AiBasedEndtoEndSystem.exception.BadException;
 import com.aibackend.AiBasedEndtoEndSystem.exception.HrException;
+import com.aibackend.AiBasedEndtoEndSystem.entity.SubscriptionPlan.SubscriptionStatus;
 import com.aibackend.AiBasedEndtoEndSystem.repository.RecruiterRepository;
 import com.aibackend.AiBasedEndtoEndSystem.repository.SubscriptionPlanRepository;
 import com.aibackend.AiBasedEndtoEndSystem.util.JwtUtil;
@@ -313,6 +315,15 @@ public class RecruiterService {
         Optional<SubscriptionPlan> subscriptionOpt = subscriptionPlanRepository.findByRecruiterId(recruiter.getId());
         if (subscriptionOpt.isPresent()) {
             SubscriptionPlan subscriptionPlan = subscriptionOpt.get();
+            if (SubscriptionStatus.ACTIVE.equals(subscriptionPlan.getStatus())
+                    && subscriptionPlan.getEndDate() != null
+                    && subscriptionPlan.getEndDate().isBefore(Instant.now())) {
+                log.info("Recruiter {} subscription has passed its end date {}. Marking EXPIRED.",
+                        recruiter.getId(), subscriptionPlan.getEndDate());
+                subscriptionPlan.setStatus(SubscriptionStatus.EXPIRED);
+                subscriptionPlan.setUpdatedAt(Instant.now());
+                subscriptionPlan = subscriptionPlanRepository.save(subscriptionPlan);
+            }
             RecruiterController.SubscriptionResponse subscriptionResponse =
                     new RecruiterController.SubscriptionResponse();
             subscriptionResponse.setId(subscriptionPlan.getId());
