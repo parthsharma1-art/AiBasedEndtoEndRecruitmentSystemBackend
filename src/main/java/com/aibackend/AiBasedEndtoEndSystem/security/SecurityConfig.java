@@ -62,13 +62,18 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/public/**",
-                                "/recruiter/**",
-                                "/candidate/**",
-                                "/file/**"  ,
+                                "/recruiter/create",
+                                "/recruiter/login",
+                                "/recruiter/google/**",
+                                "/candidate/create",
+                                "/candidate/login",
+                                "/candidate/google/**",
+                                "/file/**",
                                 "/api/auth/**",
                                 "/auth/**",
                                 "/test/**",
                                 "/api/checkout/**",
+                                "/checkout/**",
                                 "/api/webhook/**",
                                 "/webhook/**"
                         ).permitAll()

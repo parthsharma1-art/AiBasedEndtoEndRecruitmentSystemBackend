@@ -28,8 +28,13 @@ public class RateLimitFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        String ipAddress = request.getRemoteAddr();
-        if (ipAddress == null || ipAddress.isEmpty()) {
+        String ipAddress = request.getHeader("X-Forwarded-For");
+        if (ipAddress != null && !ipAddress.isBlank()) {
+            ipAddress = ipAddress.split(",")[0].trim();
+        } else {
+            ipAddress = request.getRemoteAddr();
+        }
+        if (ipAddress == null || ipAddress.isBlank()) {
             ipAddress = "unknown";
         }
 

@@ -29,17 +29,18 @@ public class JwtUtil {
     private static final String AUTH_USER_CACHE_PREFIX = "auth:userDTO:";
     private static final Duration AUTH_USER_CACHE_TTL = Duration.ofDays(1);
 
-    private static final String SECRET = "AIBasedEndToEndRecruitmentSystemSecretKey1234567890";
-
-    private final Key key = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
+    private final Key key;
 
     private static final long TOKEN_EXPIRY_SECONDS = 72 * 60 * 60; // 72 hours
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
 
-    public JwtUtil(StringRedisTemplate stringRedisTemplate, ObjectMapper objectMapper) {
+    public JwtUtil(StringRedisTemplate stringRedisTemplate,
+                   ObjectMapper objectMapper,
+                   @org.springframework.beans.factory.annotation.Value("${jwt.secret:AIBasedEndToEndRecruitmentSystemSecretKey1234567890}") String secret) {
         this.stringRedisTemplate = stringRedisTemplate;
         this.objectMapper = objectMapper;
+        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     @Data

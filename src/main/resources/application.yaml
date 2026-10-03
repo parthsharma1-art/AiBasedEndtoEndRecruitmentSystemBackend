@@ -31,12 +31,16 @@ UPSTASH_REDIS_REST_TOKEN: ${REDIS_REST_TOKEN}
 
 server:
   port: ${PORT:8081}
+  forward-headers-strategy: framework
   servlet:
     context-path: /api
 
   tomcat:
     max-swallow-size: -1
     max-http-form-post-size: 100MB
+
+jwt:
+  secret: ${JWT_SECRET:AIBasedEndToEndRecruitmentSystemSecretKey1234567890}
 
 
 app:
